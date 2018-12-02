@@ -2,14 +2,16 @@ package bn128
 
 import (
 	"math/big"
+
+	"github.com/arnaucube/go-snark/fields"
 )
 
 type G2 struct {
-	F Fq2
+	F fields.Fq2
 	G [3][2]*big.Int
 }
 
-func NewG2(f Fq2, g [2][2]*big.Int) G2 {
+func NewG2(f fields.Fq2, g [2][2]*big.Int) G2 {
 	var g2 G2
 	g2.F = f
 	g2.G = [3][2]*big.Int{

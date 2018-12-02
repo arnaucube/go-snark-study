@@ -1,5 +1,5 @@
 ## Bn128
-Implementation of the bn128 pairing.
+Implementation of the bn128 pairing in Go.
 
 
 Implementation followng the information and the implementations from:

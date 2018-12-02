@@ -1,4 +1,4 @@
-package bn128
+package fields
 
 import (
 	"bytes"

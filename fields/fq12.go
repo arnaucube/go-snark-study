@@ -1,4 +1,4 @@
-package bn128
+package fields
 
 import (
 	"bytes"
@@ -134,6 +134,12 @@ func (fq12 Fq12) Square(a [2][3][2]*big.Int) [2][3][2]*big.Int {
 				fq12.mulByNonResidue(ab))),
 		fq12.F.Add(ab, ab),
 	}
+}
+
+func BigIsOdd(n *big.Int) bool {
+	one := big.NewInt(int64(1))
+	and := new(big.Int).And(n, one)
+	return bytes.Equal(and.Bytes(), big.NewInt(int64(1)).Bytes())
 }
 
 func (fq12 Fq12) Exp(base [2][3][2]*big.Int, e *big.Int) [2][3][2]*big.Int {

@@ -1,5 +1,7 @@
 # go-snark [![Go Report Card](https://goreportcard.com/badge/github.com/arnaucube/go-snark)](https://goreportcard.com/report/github.com/arnaucube/go-snark)
 
+zk-SNARK library implementation in Go
+
 Not finished, work in progress (doing this in my free time, so I don't have much time).
 
 
@@ -54,7 +56,7 @@ z: [24 -50 35 -10 1]
 ```
 
 ## Bn128
-Implementation of the bn128 pairing.
+Implementation of the bn128 pairing in Go.
 
 
 Implementation followng the information and the implementations from:

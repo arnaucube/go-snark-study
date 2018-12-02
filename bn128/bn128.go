@@ -1,21 +1,23 @@
 package bn128
 
 import (
-	"bytes"
 	"errors"
 	"math/big"
+
+	"github.com/arnaucube/go-snark/fields"
 )
 
 type Bn128 struct {
 	Q             *big.Int
+	R             *big.Int
 	Gg1           [2]*big.Int
 	Gg2           [2][2]*big.Int
 	NonResidueFq2 *big.Int
 	NonResidueFq6 [2]*big.Int
-	Fq1           Fq
-	Fq2           Fq2
-	Fq6           Fq6
-	Fq12          Fq12
+	Fq1           fields.Fq
+	Fq2           fields.Fq2
+	Fq6           fields.Fq6
+	Fq12          fields.Fq12
 	G1            G1
 	G2            G2
 	LoopCount     *big.Int
@@ -33,11 +35,17 @@ type Bn128 struct {
 
 func NewBn128() (Bn128, error) {
 	var b Bn128
-	q, ok := new(big.Int).SetString("21888242871839275222246405745257275088696311157297823662689037894645226208583", 10) // i
+	q, ok := new(big.Int).SetString("21888242871839275222246405745257275088696311157297823662689037894645226208583", 10)
 	if !ok {
 		return b, errors.New("err with q")
 	}
 	b.Q = q
+
+	r, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+	if !ok {
+		return b, errors.New("err with r")
+	}
+	b.R = r
 
 	b.Gg1 = [2]*big.Int{
 		big.NewInt(int64(1)),
@@ -72,7 +80,7 @@ func NewBn128() (Bn128, error) {
 		},
 	}
 
-	b.Fq1 = NewFq(q)
+	b.Fq1 = fields.NewFq(q)
 	b.NonResidueFq2, ok = new(big.Int).SetString("21888242871839275222246405745257275088696311157297823662689037894645226208582", 10) // i
 	if !ok {
 		return b, errors.New("err with nonResidueFq2")
@@ -82,9 +90,9 @@ func NewBn128() (Bn128, error) {
 		big.NewInt(int64(1)),
 	}
 
-	b.Fq2 = NewFq2(b.Fq1, b.NonResidueFq2)
-	b.Fq6 = NewFq6(b.Fq2, b.NonResidueFq6)
-	b.Fq12 = NewFq12(b.Fq6, b.Fq2, b.NonResidueFq6)
+	b.Fq2 = fields.NewFq2(b.Fq1, b.NonResidueFq2)
+	b.Fq6 = fields.NewFq6(b.Fq2, b.NonResidueFq6)
+	b.Fq12 = fields.NewFq12(b.Fq6, b.Fq2, b.NonResidueFq6)
 
 	b.G1 = NewG1(b.Fq1, b.Gg1)
 	b.G2 = NewG2(b.Fq2, b.Gg2)
@@ -95,12 +103,6 @@ func NewBn128() (Bn128, error) {
 	}
 
 	return b, nil
-}
-
-func BigIsOdd(n *big.Int) bool {
-	one := big.NewInt(int64(1))
-	and := new(big.Int).And(n, one)
-	return bytes.Equal(and.Bytes(), big.NewInt(int64(1)).Bytes())
 }
 
 func (bn128 *Bn128) preparePairing() error {

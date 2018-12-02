@@ -1,4 +1,4 @@
-package bn128
+package fields
 
 import (
 	"math/big"
@@ -84,8 +84,17 @@ func TestFq2(t *testing.T) {
 }
 
 func TestFq6(t *testing.T) {
-	bn128, err := NewBn128()
-	assert.Nil(t, err)
+	// bn128, err := NewBn128()
+	// assert.Nil(t, err)
+	q, ok := new(big.Int).SetString("21888242871839275222246405745257275088696311157297823662689037894645226208583", 10) // i
+	assert.True(t, ok)
+	fq1 := NewFq(q)
+	nonResidueFq2, ok := new(big.Int).SetString("21888242871839275222246405745257275088696311157297823662689037894645226208582", 10) // i
+	assert.True(t, ok)
+	nonResidueFq6 := iiToBig(9, 1)
+
+	fq2 := Fq2{fq1, nonResidueFq2}
+	fq6 := Fq6{fq2, nonResidueFq6}
 
 	a := [3][2]*big.Int{
 		iiToBig(1, 2),
@@ -96,9 +105,9 @@ func TestFq6(t *testing.T) {
 		iiToBig(10, 9),
 		iiToBig(8, 7)}
 
-	mulRes := bn128.Fq6.Mul(a, b)
-	divRes := bn128.Fq6.Div(mulRes, b)
-	assert.Equal(t, bn128.Fq6.Affine(a), bn128.Fq6.Affine(divRes))
+	mulRes := fq6.Mul(a, b)
+	divRes := fq6.Div(mulRes, b)
+	assert.Equal(t, fq6.Affine(a), fq6.Affine(divRes))
 }
 
 func TestFq12(t *testing.T) {

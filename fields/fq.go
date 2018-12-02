@@ -1,4 +1,4 @@
-package bn128
+package fields
 
 import (
 	"bytes"
@@ -30,29 +30,29 @@ func (fq Fq) One() *big.Int {
 // Add performs an addition on the Fq
 func (fq Fq) Add(a, b *big.Int) *big.Int {
 	r := new(big.Int).Add(a, b)
-	// return new(big.Int).Mod(r, fq.Q)
-	return r
+	return new(big.Int).Mod(r, fq.Q)
+	// return r
 }
 
 // Double performs a doubling on the Fq
 func (fq Fq) Double(a *big.Int) *big.Int {
 	r := new(big.Int).Add(a, a)
-	// return new(big.Int).Mod(r, fq.Q)
-	return r
+	return new(big.Int).Mod(r, fq.Q)
+	// return r
 }
 
 // Sub performs a subtraction on the Fq
 func (fq Fq) Sub(a, b *big.Int) *big.Int {
 	r := new(big.Int).Sub(a, b)
-	// return new(big.Int).Mod(r, fq.Q)
-	return r
+	return new(big.Int).Mod(r, fq.Q)
+	// return r
 }
 
 // Neg performs a negation on the Fq
 func (fq Fq) Neg(a *big.Int) *big.Int {
 	m := new(big.Int).Neg(a)
-	// return new(big.Int).Mod(m, fq.Q)
-	return m
+	return new(big.Int).Mod(m, fq.Q)
+	// return m
 }
 
 // Mul performs a multiplication on the Fq
@@ -89,10 +89,32 @@ func (fq Fq) Inverse(a *big.Int) *big.Int {
 	// return t
 }
 
+// Div performs the division over the finite field
+func (fq Fq) Div(a, b *big.Int) *big.Int {
+	d := fq.Mul(a, fq.Inverse(b))
+	return new(big.Int).Mod(d, fq.Q)
+}
+
 // Square performs a square operation on the Fq
 func (fq Fq) Square(a *big.Int) *big.Int {
 	m := new(big.Int).Mul(a, a)
 	return new(big.Int).Mod(m, fq.Q)
+}
+
+// Exp performs the exponential over Fq
+func (fq Fq) Exp(base *big.Int, e *big.Int) *big.Int {
+	res := fq.One()
+	rem := fq.Copy(e)
+	exp := base
+
+	for !bytes.Equal(rem.Bytes(), big.NewInt(int64(0)).Bytes()) {
+		if BigIsOdd(rem) {
+			res = fq.Mul(res, exp)
+		}
+		exp = fq.Square(exp)
+		rem = new(big.Int).Rsh(rem, 1)
+	}
+	return res
 }
 
 func (fq Fq) IsZero(a *big.Int) bool {

@@ -1,4 +1,4 @@
-package sn
+package r1csqapFloat
 
 import (
 	"math/big"

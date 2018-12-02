@@ -1,4 +1,4 @@
-package sn
+package r1csqapFloat
 
 import (
 	"fmt"
@@ -52,7 +52,7 @@ func TestPol(t *testing.T) {
 	c = PolAdd(a, b)
 	assert.Equal(t, c, []*big.Float{b4, b0, b6})
 
-	// polynomial substraction
+	// polynomial subtraction
 	c = PolSub(a, b)
 	assert.Equal(t, c, []*big.Float{b2neg, b0, b4})
 
