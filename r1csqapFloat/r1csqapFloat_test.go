@@ -84,7 +84,12 @@ func TestLagrangeInterpolation(t *testing.T) {
 func TestR1CSToQAP(t *testing.T) {
 	b0 := big.NewFloat(float64(0))
 	b1 := big.NewFloat(float64(1))
+	b3 := big.NewFloat(float64(3))
 	b5 := big.NewFloat(float64(5))
+	b9 := big.NewFloat(float64(9))
+	b27 := big.NewFloat(float64(27))
+	b30 := big.NewFloat(float64(30))
+	b35 := big.NewFloat(float64(35))
 	a := [][]*big.Float{
 		[]*big.Float{b0, b1, b0, b0, b0, b0},
 		[]*big.Float{b0, b0, b0, b1, b0, b0},
@@ -103,10 +108,21 @@ func TestR1CSToQAP(t *testing.T) {
 		[]*big.Float{b0, b0, b0, b0, b0, b1},
 		[]*big.Float{b0, b0, b1, b0, b0, b0},
 	}
-	alpha, beta, gamma, z := R1CSToQAP(a, b, c)
+	ap, bp, cp, z := R1CSToQAP(a, b, c)
+	fmt.Println(ap)
+	fmt.Println(bp)
+	fmt.Println(cp)
+	fmt.Println(z)
+	zexpected := []*big.Float{big.NewFloat(float64(24)), big.NewFloat(float64(-50)), big.NewFloat(float64(35)), big.NewFloat(float64(-10)), big.NewFloat(float64(1))}
+	assert.Equal(t, z, zexpected)
+
+	w := []*big.Float{b1, b3, b35, b9, b27, b30}
+	alpha, beta, gamma, px := SolPolynomials(w, ap, bp, cp)
 	fmt.Println(alpha)
 	fmt.Println(beta)
 	fmt.Println(gamma)
-	fmt.Println(z)
+	fmt.Println(px)
 
+	h := DivisorPolinomial(px, z)
+	fmt.Println(h)
 }

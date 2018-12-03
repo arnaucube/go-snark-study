@@ -47,6 +47,21 @@ func (pf PolynomialField) Mul(a, b []*big.Int) []*big.Int {
 	}
 	return r
 }
+func (pf PolynomialField) Div(a, b []*big.Int) ([]*big.Int, []*big.Int) {
+	// https://en.wikipedia.org/wiki/Division_algorithm
+	r := ArrayOfBigZeros(len(a) - len(b) + 1)
+	rem := a
+	for len(rem) >= len(b) {
+		l := pf.F.Div(rem[len(rem)-1], b[len(b)-1])
+		pos := len(rem) - len(b)
+		r[pos] = l
+		aux := ArrayOfBigZeros(pos)
+		aux1 := append(aux, l)
+		aux2 := pf.Sub(rem, pf.Mul(b, aux1))
+		rem = aux2[:len(aux2)-1]
+	}
+	return r, rem
+}
 
 func max(a, b int) int {
 	if a > b {
@@ -72,23 +87,10 @@ func (pf PolynomialField) Sub(a, b []*big.Int) []*big.Int {
 		r[i] = pf.F.Add(r[i], a[i])
 	}
 	for i := 0; i < len(b); i++ {
-		// bneg := pf.F.Mul(b[i], big.NewInt(int64(-1)))
-		// r[i] = pf.F.Add(r[i], bneg)
 		r[i] = pf.F.Sub(r[i], b[i])
 	}
 	return r
 }
-
-// func FloatPow(a *big.Int, e int) *big.Int {
-//         if e == 0 {
-//                 return big.NewInt(int64(1))
-//         }
-//         result := new(big.Int).Copy(a)
-//         for i := 0; i < e-1; i++ {
-//                 result = new(big.Int).Mul(result, a)
-//         }
-//         return result
-// }
 
 func (pf PolynomialField) Eval(v []*big.Int, x *big.Int) *big.Int {
 	r := big.NewInt(int64(0))
@@ -154,4 +156,30 @@ func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*bi
 		z = pf.Mul(z, []*big.Int{ineg, b1})
 	}
 	return alpha, beta, gamma, z
+}
+
+func (pf PolynomialField) SolPolynomials(r []*big.Int, ap, bp, cp [][]*big.Int) ([]*big.Int, []*big.Int, []*big.Int, []*big.Int) {
+	var alpha []*big.Int
+	for i := 0; i < len(r); i++ {
+		m := pf.Mul([]*big.Int{r[i]}, ap[i])
+		alpha = pf.Add(alpha, m)
+	}
+	var beta []*big.Int
+	for i := 0; i < len(r); i++ {
+		m := pf.Mul([]*big.Int{r[i]}, bp[i])
+		beta = pf.Add(beta, m)
+	}
+	var gamma []*big.Int
+	for i := 0; i < len(r); i++ {
+		m := pf.Mul([]*big.Int{r[i]}, cp[i])
+		gamma = pf.Add(gamma, m)
+	}
+
+	px := pf.Sub(pf.Mul(alpha, beta), gamma)
+	return alpha, beta, gamma, px
+}
+
+func (pf PolynomialField) DivisorPolinomial(px, z []*big.Int) []*big.Int {
+	quo, _ := pf.Div(px, z)
+	return quo
 }

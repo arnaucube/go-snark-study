@@ -108,7 +108,12 @@ func TestR1CSToQAP(t *testing.T) {
 
 	b0 := big.NewInt(int64(0))
 	b1 := big.NewInt(int64(1))
+	b3 := big.NewInt(int64(3))
 	b5 := big.NewInt(int64(5))
+	b9 := big.NewInt(int64(9))
+	b27 := big.NewInt(int64(27))
+	b30 := big.NewInt(int64(30))
+	b35 := big.NewInt(int64(35))
 	a := [][]*big.Int{
 		[]*big.Int{b0, b1, b0, b0, b0, b0},
 		[]*big.Int{b0, b0, b0, b1, b0, b0},
@@ -127,10 +132,27 @@ func TestR1CSToQAP(t *testing.T) {
 		[]*big.Int{b0, b0, b0, b0, b0, b1},
 		[]*big.Int{b0, b0, b1, b0, b0, b0},
 	}
-	alpha, beta, gamma, z := pf.R1CSToQAP(a, b, c)
+	ap, bp, cp, z := pf.R1CSToQAP(a, b, c)
+	fmt.Println(ap)
+	fmt.Println(bp)
+	fmt.Println(cp)
+	fmt.Println(z)
+
+	w := []*big.Int{b1, b3, b35, b9, b27, b30}
+	alpha, beta, gamma, px := pf.SolPolynomials(w, ap, bp, cp)
 	fmt.Println(alpha)
 	fmt.Println(beta)
 	fmt.Println(gamma)
-	fmt.Println(z)
+	fmt.Println(px)
 
+	h := pf.DivisorPolinomial(px, z)
+	fmt.Println(h)
+
+	// h==px/z so px==h*z
+	assert.Equal(t, px, pf.Mul(h, z))
+
+	// a(x) * b(x) - c(x) == h * z(x)
+	abc := pf.Sub(pf.Mul(alpha, beta), gamma)
+	hz := pf.Mul(h, z)
+	assert.Equal(t, abc, hz)
 }

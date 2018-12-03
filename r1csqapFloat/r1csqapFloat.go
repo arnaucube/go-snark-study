@@ -1,8 +1,6 @@
 package r1csqapFloat
 
-import (
-	"math/big"
-)
+import "math/big"
 
 func Transpose(matrix [][]*big.Float) [][]*big.Float {
 	var r [][]*big.Float
@@ -35,6 +33,22 @@ func PolMul(a, b []*big.Float) []*big.Float {
 		}
 	}
 	return r
+}
+
+func PolDiv(a, b []*big.Float) ([]*big.Float, []*big.Float) {
+	// https://en.wikipedia.org/wiki/Division_algorithm
+	r := ArrayOfBigZeros(len(a) - len(b) + 1)
+	rem := a
+	for len(rem) >= len(b) {
+		l := new(big.Float).Quo(rem[len(rem)-1], b[len(b)-1])
+		pos := len(rem) - len(b)
+		r[pos] = l
+		aux := ArrayOfBigZeros(pos)
+		aux1 := append(aux, l)
+		aux2 := PolSub(rem, PolMul(b, aux1))
+		rem = aux2[:len(aux2)-1]
+	}
+	return r, rem
 }
 
 func max(a, b int) int {
@@ -142,4 +156,30 @@ func R1CSToQAP(a, b, c [][]*big.Float) ([][]*big.Float, [][]*big.Float, [][]*big
 		z = PolMul(z, []*big.Float{ineg, b1})
 	}
 	return alpha, beta, gamma, z
+}
+
+func SolPolynomials(r []*big.Float, ap, bp, cp [][]*big.Float) ([]*big.Float, []*big.Float, []*big.Float, []*big.Float) {
+	var alpha []*big.Float
+	for i := 0; i < len(r); i++ {
+		m := PolMul([]*big.Float{r[i]}, ap[i])
+		alpha = PolAdd(alpha, m)
+	}
+	var beta []*big.Float
+	for i := 0; i < len(r); i++ {
+		m := PolMul([]*big.Float{r[i]}, bp[i])
+		beta = PolAdd(beta, m)
+	}
+	var gamma []*big.Float
+	for i := 0; i < len(r); i++ {
+		m := PolMul([]*big.Float{r[i]}, cp[i])
+		gamma = PolAdd(gamma, m)
+	}
+
+	px := PolSub(PolMul(alpha, beta), gamma)
+	return alpha, beta, gamma, px
+}
+
+func DivisorPolinomial(px, z []*big.Float) []*big.Float {
+	quo, _ := PolDiv(px, z)
+	return quo
 }
