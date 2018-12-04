@@ -132,27 +132,30 @@ func TestR1CSToQAP(t *testing.T) {
 		[]*big.Int{b0, b0, b0, b0, b0, b1},
 		[]*big.Int{b0, b0, b1, b0, b0, b0},
 	}
-	ap, bp, cp, z := pf.R1CSToQAP(a, b, c)
-	fmt.Println(ap)
-	fmt.Println(bp)
-	fmt.Println(cp)
-	fmt.Println(z)
+	alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
+	fmt.Println(alphas)
+	fmt.Println(betas)
+	fmt.Println(gammas)
+	fmt.Print("Z(x): ")
+	fmt.Println(zx)
 
 	w := []*big.Int{b1, b3, b35, b9, b27, b30}
-	alpha, beta, gamma, px := pf.SolPolynomials(w, ap, bp, cp)
-	fmt.Println(alpha)
-	fmt.Println(beta)
-	fmt.Println(gamma)
+	ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
+	fmt.Println(ax)
+	fmt.Println(bx)
+	fmt.Println(cx)
 	fmt.Println(px)
 
-	h := pf.DivisorPolinomial(px, z)
-	fmt.Println(h)
+	hx := pf.DivisorPolinomial(px, zx)
+	fmt.Println(hx)
 
-	// h==px/z so px==h*z
-	assert.Equal(t, px, pf.Mul(h, z))
+	// hx==px/zx so px==hx*zx
+	assert.Equal(t, px, pf.Mul(hx, zx))
 
-	// a(x) * b(x) - c(x) == h * z(x)
-	abc := pf.Sub(pf.Mul(alpha, beta), gamma)
-	hz := pf.Mul(h, z)
+	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
+	abc := pf.Sub(pf.Mul(ax, bx), cx)
+	assert.Equal(t, abc, px)
+	hz := pf.Mul(hx, zx)
 	assert.Equal(t, abc, hz)
+
 }

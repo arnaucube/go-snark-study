@@ -108,21 +108,30 @@ func TestR1CSToQAP(t *testing.T) {
 		[]*big.Float{b0, b0, b0, b0, b0, b1},
 		[]*big.Float{b0, b0, b1, b0, b0, b0},
 	}
-	ap, bp, cp, z := R1CSToQAP(a, b, c)
-	fmt.Println(ap)
-	fmt.Println(bp)
-	fmt.Println(cp)
-	fmt.Println(z)
+	// alphas, betas, gammas
+	alphas, betas, gammas, zx := R1CSToQAP(a, b, c)
+	fmt.Println(alphas)
+	fmt.Println(betas)
+	fmt.Println(gammas)
+	fmt.Print("Z(x): ")
+	fmt.Println(zx)
 	zexpected := []*big.Float{big.NewFloat(float64(24)), big.NewFloat(float64(-50)), big.NewFloat(float64(35)), big.NewFloat(float64(-10)), big.NewFloat(float64(1))}
-	assert.Equal(t, z, zexpected)
+	assert.Equal(t, zx, zexpected)
 
+	// witness
 	w := []*big.Float{b1, b3, b35, b9, b27, b30}
-	alpha, beta, gamma, px := SolPolynomials(w, ap, bp, cp)
-	fmt.Println(alpha)
-	fmt.Println(beta)
-	fmt.Println(gamma)
+	fmt.Print("w: ")
+	fmt.Println(w)
+	// QAP A(x), B(x), C(x)
+	ax, bx, cx, px := CombinePolynomials(w, alphas, betas, gammas)
+	fmt.Print("A(x), B(x), C(x), P(x): ")
+	fmt.Println(ax)
+	fmt.Println(bx)
+	fmt.Println(cx)
 	fmt.Println(px)
 
-	h := DivisorPolinomial(px, z)
-	fmt.Println(h)
+	hx := DivisorPolinomial(px, zx)
+	fmt.Print("H(x): ")
+	fmt.Println(hx)
+
 }

@@ -137,17 +137,17 @@ func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*bi
 	aT := Transpose(a)
 	bT := Transpose(b)
 	cT := Transpose(c)
-	var alpha [][]*big.Int
+	var alphas [][]*big.Int
 	for i := 0; i < len(aT); i++ {
-		alpha = append(alpha, pf.LagrangeInterpolation(aT[i]))
+		alphas = append(alphas, pf.LagrangeInterpolation(aT[i]))
 	}
-	var beta [][]*big.Int
+	var betas [][]*big.Int
 	for i := 0; i < len(bT); i++ {
-		beta = append(beta, pf.LagrangeInterpolation(bT[i]))
+		betas = append(betas, pf.LagrangeInterpolation(bT[i]))
 	}
-	var gamma [][]*big.Int
+	var gammas [][]*big.Int
 	for i := 0; i < len(cT); i++ {
-		gamma = append(gamma, pf.LagrangeInterpolation(cT[i]))
+		gammas = append(gammas, pf.LagrangeInterpolation(cT[i]))
 	}
 	z := []*big.Int{big.NewInt(int64(1))}
 	for i := 1; i < len(aT[0])+1; i++ {
@@ -155,10 +155,10 @@ func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*bi
 		b1 := big.NewInt(int64(1))
 		z = pf.Mul(z, []*big.Int{ineg, b1})
 	}
-	return alpha, beta, gamma, z
+	return alphas, betas, gammas, z
 }
 
-func (pf PolynomialField) SolPolynomials(r []*big.Int, ap, bp, cp [][]*big.Int) ([]*big.Int, []*big.Int, []*big.Int, []*big.Int) {
+func (pf PolynomialField) CombinePolynomials(r []*big.Int, ap, bp, cp [][]*big.Int) ([]*big.Int, []*big.Int, []*big.Int, []*big.Int) {
 	var alpha []*big.Int
 	for i := 0; i < len(r); i++ {
 		m := pf.Mul([]*big.Int{r[i]}, ap[i])

@@ -137,17 +137,17 @@ func R1CSToQAP(a, b, c [][]*big.Float) ([][]*big.Float, [][]*big.Float, [][]*big
 	aT := Transpose(a)
 	bT := Transpose(b)
 	cT := Transpose(c)
-	var alpha [][]*big.Float
+	var alphas [][]*big.Float
 	for i := 0; i < len(aT); i++ {
-		alpha = append(alpha, LagrangeInterpolation(aT[i]))
+		alphas = append(alphas, LagrangeInterpolation(aT[i]))
 	}
-	var beta [][]*big.Float
+	var betas [][]*big.Float
 	for i := 0; i < len(bT); i++ {
-		beta = append(beta, LagrangeInterpolation(bT[i]))
+		betas = append(betas, LagrangeInterpolation(bT[i]))
 	}
-	var gamma [][]*big.Float
+	var gammas [][]*big.Float
 	for i := 0; i < len(cT); i++ {
-		gamma = append(gamma, LagrangeInterpolation(cT[i]))
+		gammas = append(gammas, LagrangeInterpolation(cT[i]))
 	}
 	z := []*big.Float{big.NewFloat(float64(1))}
 	for i := 1; i < len(aT[0])+1; i++ {
@@ -155,10 +155,10 @@ func R1CSToQAP(a, b, c [][]*big.Float) ([][]*big.Float, [][]*big.Float, [][]*big
 		b1 := big.NewFloat(float64(1))
 		z = PolMul(z, []*big.Float{ineg, b1})
 	}
-	return alpha, beta, gamma, z
+	return alphas, betas, gammas, z
 }
 
-func SolPolynomials(r []*big.Float, ap, bp, cp [][]*big.Float) ([]*big.Float, []*big.Float, []*big.Float, []*big.Float) {
+func CombinePolynomials(r []*big.Float, ap, bp, cp [][]*big.Float) ([]*big.Float, []*big.Float, []*big.Float, []*big.Float) {
 	var alpha []*big.Float
 	for i := 0; i < len(r); i++ {
 		m := PolMul([]*big.Float{r[i]}, ap[i])
