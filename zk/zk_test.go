@@ -64,33 +64,20 @@ func TestZk(t *testing.T) {
 	assert.Equal(t, abc, hz)
 
 	// calculate trusted setup
-	gt1, gt2, err := GenerateTrustedSetup(bn, len(ax))
+	setup, err := GenerateTrustedSetup(bn, len(ax))
 	assert.Nil(t, err)
 	fmt.Println("trusted setup:")
-	fmt.Println(gt1)
-	fmt.Println(gt2)
+	fmt.Println(setup.G1T)
+	fmt.Println(setup.G2T)
 
 	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	piA, piB, piC, piH, piZ := GenerateProofs(bn, gt1, gt2, ax, bx, cx, hx, zx)
+	proof := GenerateProofs(bn, setup, ax, bx, cx, hx, zx)
 	fmt.Println("proofs:")
-	fmt.Println(piA)
-	fmt.Println(piB)
-	fmt.Println(piC)
-	fmt.Println(piH)
-	fmt.Println(piZ)
+	fmt.Println(proof.PiA)
+	fmt.Println(proof.PiB)
+	fmt.Println(proof.PiC)
+	fmt.Println(proof.PiH)
+	fmt.Println(proof.Vz)
 
-	// pairing
-	fmt.Println("pairing")
-	pairingAB, err := bn.Pairing(piA, piB)
-	assert.Nil(t, err)
-	pairingCg2, err := bn.Pairing(piC, bn.G2.G)
-	assert.Nil(t, err)
-	pairingLeft := bn.Fq12.Div(pairingAB, pairingCg2)
-	pairingHg2Z, err := bn.Pairing(piH, piZ)
-	assert.Nil(t, err)
-
-	fmt.Println(bn.Fq12.Affine(pairingLeft))
-	fmt.Println(bn.Fq12.Affine(pairingHg2Z))
-
-	assert.True(t, bn.Fq12.Equal(pairingLeft, pairingHg2Z))
+	assert.True(t, VerifyProof(bn, setup, proof))
 }

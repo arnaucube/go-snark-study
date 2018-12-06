@@ -112,4 +112,4 @@ assert.True(t, bn128.Fq12.Equal(pA, pB))
 ## Caution
 Not finished, work in progress (implementing this in my free time to understand it better, so I don't have much time).
 
-Thanks to @jbaylina, @bellesmarta, @adriamb for their explanations that helped to understand a little bit this.
+Thanks to [@jbaylina](https://github.com/jbaylina), [@bellesmarta](https://github.com/bellesmarta), [@adriamb](https://github.com/adriamb) for their explanations that helped to understand this a little bit.
