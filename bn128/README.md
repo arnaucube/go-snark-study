@@ -1,4 +1,5 @@
 ## Bn128
+[![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/bn128?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/bn128) bn128
 Implementation of the bn128 pairing in Go.
 
 

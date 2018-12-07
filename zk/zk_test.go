@@ -71,7 +71,8 @@ func TestZk(t *testing.T) {
 	fmt.Println(setup.G2T)
 
 	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	proof := GenerateProofs(bn, setup, ax, bx, cx, hx, zx)
+	proof, err := GenerateProofs(bn, f, setup, ax, bx, cx, hx, zx)
+	assert.Nil(t, err)
 	fmt.Println("proofs:")
 	fmt.Println(proof.PiA)
 	fmt.Println(proof.PiB)
@@ -79,5 +80,10 @@ func TestZk(t *testing.T) {
 	fmt.Println(proof.PiH)
 	fmt.Println(proof.Vz)
 
-	assert.True(t, VerifyProof(bn, setup, proof))
+	publicSetup := Setup{
+		G1T: setup.G1T,
+		G2T: setup.G2T,
+	}
+
+	assert.True(t, VerifyProof(bn, publicSetup, proof))
 }
