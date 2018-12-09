@@ -1,4 +1,4 @@
-package zk
+package snark
 
 import (
 	"fmt"
@@ -71,7 +71,7 @@ func TestZk(t *testing.T) {
 	fmt.Println(setup.G2T)
 
 	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	proof, err := GenerateProofs(bn, f, setup, ax, bx, cx, hx, zx)
+	proof, err := GenerateProofs(bn, f, setup, w, ax, bx, cx, hx, zx)
 	assert.Nil(t, err)
 	fmt.Println("proofs:")
 	fmt.Println(proof.PiA)

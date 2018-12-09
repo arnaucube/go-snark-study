@@ -26,10 +26,6 @@ over Elliptic Curves`, Matthieu Rivain https://eprint.iacr.org/2011/338.pdf
 - [x] MillerLoop
 - [x] Pairing
 
-### Installation
-```
-go get github.com/arnaucube/bn128
-```
 
 #### Usage
 
