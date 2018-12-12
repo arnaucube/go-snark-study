@@ -105,6 +105,15 @@ func NewBn128() (Bn128, error) {
 	return b, nil
 }
 
+func NewFqR() (fields.Fq, error){
+	r, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+	if !ok {
+		return fields.Fq{}, errors.New("err parsing R")
+	}
+	fqR := fields.NewFq(r)
+	return fqR, nil
+}
+
 func (bn128 *Bn128) preparePairing() error {
 	var ok bool
 	bn128.LoopCount, ok = new(big.Int).SetString("29793968203157093288", 10)
