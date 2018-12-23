@@ -105,7 +105,7 @@ func NewBn128() (Bn128, error) {
 	return b, nil
 }
 
-func NewFqR() (fields.Fq, error){
+func NewFqR() (fields.Fq, error) {
 	r, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
 	if !ok {
 		return fields.Fq{}, errors.New("err parsing R")
@@ -172,16 +172,13 @@ func (bn128 *Bn128) preparePairing() error {
 
 }
 
-func (bn128 Bn128) Pairing(p1 [3]*big.Int, p2 [3][2]*big.Int) ([2][3][2]*big.Int, error) {
+func (bn128 Bn128) Pairing(p1 [3]*big.Int, p2 [3][2]*big.Int) [2][3][2]*big.Int {
 	pre1 := bn128.PreComputeG1(p1)
-	pre2, err := bn128.PreComputeG2(p2)
-	if err != nil {
-		return [2][3][2]*big.Int{}, err
-	}
+	pre2 := bn128.PreComputeG2(p2)
 
 	r1 := bn128.MillerLoop(pre1, pre2)
 	res := bn128.FinalExponentiation(r1)
-	return res, nil
+	return res
 }
 
 type AteG1Precomp struct {
@@ -209,7 +206,7 @@ type AteG2Precomp struct {
 	Coeffs []EllCoeffs
 }
 
-func (bn128 Bn128) PreComputeG2(p [3][2]*big.Int) (AteG2Precomp, error) {
+func (bn128 Bn128) PreComputeG2(p [3][2]*big.Int) AteG2Precomp {
 	qCopy := bn128.G2.Affine(p)
 	res := AteG2Precomp{
 		qCopy[0],
@@ -235,11 +232,13 @@ func (bn128 Bn128) PreComputeG2(p [3][2]*big.Int) (AteG2Precomp, error) {
 
 	q1 := bn128.G2.Affine(bn128.G2MulByQ(qCopy))
 	if !bn128.Fq2.Equal(q1[2], bn128.Fq2.One()) {
-		return res, errors.New("q1[2] != Fq2.One")
+		// return res, errors.New("q1[2] != Fq2.One")
+		panic(errors.New("q1[2] != Fq2.One()"))
 	}
 	q2 := bn128.G2.Affine(bn128.G2MulByQ(q1))
 	if !bn128.Fq2.Equal(q2[2], bn128.Fq2.One()) {
-		return res, errors.New("q2[2] != Fq2.One")
+		// return res, errors.New("q2[2] != Fq2.One")
+		panic(errors.New("q2[2] != Fq2.One()"))
 	}
 
 	if bn128.LoopCountNeg {
@@ -253,7 +252,7 @@ func (bn128 Bn128) PreComputeG2(p [3][2]*big.Int) (AteG2Precomp, error) {
 	c, r = bn128.MixedAdditionStep(q2, r)
 	res.Coeffs = append(res.Coeffs, c)
 
-	return res, nil
+	return res
 }
 
 func (bn128 Bn128) DoublingStep(current [3][2]*big.Int) (EllCoeffs, [3][2]*big.Int) {

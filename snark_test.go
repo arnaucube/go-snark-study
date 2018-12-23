@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/arnaucube/go-snark/bn128"
+	"github.com/arnaucube/go-snark/compiler"
 	"github.com/arnaucube/go-snark/fields"
 	"github.com/arnaucube/go-snark/r1csqap"
 	"github.com/stretchr/testify/assert"
@@ -16,10 +17,10 @@ func TestZk(t *testing.T) {
 	assert.Nil(t, err)
 
 	// new Finite Field
-	f := fields.NewFq(bn.R)
+	fqR := fields.NewFq(bn.R)
 
 	// new Polynomial Field
-	pf := r1csqap.NewPolynomialField(f)
+	pf := r1csqap.NewPolynomialField(fqR)
 
 	b0 := big.NewInt(int64(0))
 	b1 := big.NewInt(int64(1))
@@ -49,7 +50,13 @@ func TestZk(t *testing.T) {
 	}
 	alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
 
+	// wittness = 1, 3, 35, 9, 27, 30
 	w := []*big.Int{b1, b3, b35, b9, b27, b30}
+	circuit := compiler.Circuit{
+		NVars:    6,
+		NPublic:  0,
+		NSignals: len(w),
+	}
 	ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
 
 	hx := pf.DivisorPolinomial(px, zx)
@@ -62,23 +69,19 @@ func TestZk(t *testing.T) {
 	assert.Equal(t, abc, px)
 	hz := pf.Mul(hx, zx)
 	assert.Equal(t, abc, hz)
+	
+	div, rem := pf.Div(px, zx)
+	assert.Equal(t, hx, div)
+	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
 
 	// calculate trusted setup
-	setup, err := GenerateTrustedSetup(bn, pf, len(w), alphas, betas, gammas, ax, bx, cx, hx, zx)
+	setup, err := GenerateTrustedSetup(bn, fqR, pf, len(w), circuit, alphas, betas, gammas, zx)
 	assert.Nil(t, err)
-	fmt.Println("trusted setup:")
-	fmt.Println(setup.G1T)
-	fmt.Println(setup.G2T)
+	fmt.Println("t", setup.Toxic.T)
 
 	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	proof, err := GenerateProofs(bn, f, setup, hx, w)
+	proof, err := GenerateProofs(bn, fqR, circuit, setup, hx, w)
 	assert.Nil(t, err)
-	fmt.Println("proofs:")
-	fmt.Println(proof.PiA)
-	fmt.Println(proof.PiB)
-	fmt.Println(proof.PiC)
-	fmt.Println(proof.PiH)
-	// fmt.Println(proof.Vz)
 
-	assert.True(t, VerifyProof(bn, setup, proof))
+	assert.True(t, VerifyProof(bn, circuit, setup, proof))
 }

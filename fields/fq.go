@@ -2,6 +2,7 @@ package fields
 
 import (
 	"bytes"
+	"crypto/rand"
 	"math/big"
 )
 
@@ -115,6 +116,26 @@ func (fq Fq) Exp(base *big.Int, e *big.Int) *big.Int {
 		rem = new(big.Int).Rsh(rem, 1)
 	}
 	return res
+}
+
+func (fq Fq) Rand() (*big.Int, error) {
+
+	// twoexp := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(maxbits)), nil)
+	// max := new(big.Int).Sub(twoexp, big.NewInt(1))
+
+	maxbits := fq.Q.BitLen()
+	b := make([]byte, (maxbits/8)-1)
+	// b := make([]byte, 3)
+	// b := make([]byte, 3)
+	_, err := rand.Read(b)
+	if err != nil {
+		return nil, err
+	}
+	r := new(big.Int).SetBytes(b)
+	rq := new(big.Int).Mod(r, fq.Q)
+
+	// return r over q, nil
+	return rq, nil
 }
 
 func (fq Fq) IsZero(a *big.Int) bool {

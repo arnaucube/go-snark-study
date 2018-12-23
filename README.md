@@ -5,6 +5,7 @@ zkSNARK library implementation in Go
 
 
 `Succinct Non-Interactive Zero Knowledge for a von Neumann Architecture`, Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza https://eprint.iacr.org/2013/879.pdf
+`Pinocchio: Nearly practical verifiable computation`, Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova https://eprint.iacr.org/2013/279.pdf
 
 ### Usage
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark?status.svg)](https://godoc.org/github.com/arnaucube/go-snark) zkSnark
@@ -18,7 +19,7 @@ bn, err := bn128.NewBn128()
 assert.Nil(t, err)
 
 // new Finite Field
-f := fields.NewFq(bn.R)
+fqR := fields.NewFq(bn.R)
 
 // new Polynomial Field
 pf := r1csqap.NewPolynomialField(f)
@@ -34,6 +35,13 @@ w = [1, 3, 35, 9, 27, 30]
 
 alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
 
+// wittness = 1, 3, 35, 9, 27, 30
+w := []*big.Int{b1, b3, b35, b9, b27, b30}
+circuit := compiler.Circuit{
+	NVars:    6,
+	NPublic:  0,
+	NSignals: len(w),
+}
 ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
 
 hx := pf.DivisorPolinomial(px, zx)
@@ -46,22 +54,21 @@ abc := pf.Sub(pf.Mul(ax, bx), cx)
 assert.Equal(t, abc, px)
 hz := pf.Mul(hx, zx)
 assert.Equal(t, abc, hz)
+	
+div, rem := pf.Div(px, zx)
+assert.Equal(t, hx, div)
+assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
 
 // calculate trusted setup
-setup, err := GenerateTrustedSetup(bn, len(ax))
+setup, err := GenerateTrustedSetup(bn, fqR, pf, len(w), circuit, alphas, betas, gammas, zx)
 assert.Nil(t, err)
-fmt.Println("trusted setup:")
-fmt.Println(setup.G1T)
-fmt.Println(setup.G2T)
+fmt.Println("t", setup.Toxic.T)
 
 // piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-proof, err := GenerateProofs(bn, f, setup, ax, bx, cx, hx, zx)
+proof, err := GenerateProofs(bn, fqR, circuit, setup, hx, w)
 assert.Nil(t, err)
 
-
-// verify the proofs with the bn128 pairing
-verified := VerifyProof(bn, publicSetup, proof)
-assert.True(t, verified)
+assert.True(t, VerifyProof(bn, circuit, setup, proof))
 ```
 
 ### Test

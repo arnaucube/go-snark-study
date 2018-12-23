@@ -95,7 +95,6 @@ func (pf PolynomialField) Sub(a, b []*big.Int) []*big.Int {
 func (pf PolynomialField) Eval(v []*big.Int, x *big.Int) *big.Int {
 	r := big.NewInt(int64(0))
 	for i := 0; i < len(v); i++ {
-		// xi := FloatPow(x, i)
 		xi := pf.F.Exp(x, big.NewInt(int64(i)))
 		elem := pf.F.Mul(v[i], xi)
 		r = pf.F.Add(r, elem)

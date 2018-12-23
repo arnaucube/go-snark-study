@@ -22,10 +22,10 @@ func TestBN128(t *testing.T) {
 	g2b := bn128.G2.MulScalar(bn128.G2.G, bn128.Fq1.Copy(big40))
 
 	pre1a := bn128.PreComputeG1(g1a)
-	pre2a, err := bn128.PreComputeG2(g2a)
+	pre2a := bn128.PreComputeG2(g2a)
 	assert.Nil(t, err)
 	pre1b := bn128.PreComputeG1(g1b)
-	pre2b, err := bn128.PreComputeG2(g2b)
+	pre2b := bn128.PreComputeG2(g2b)
 	assert.Nil(t, err)
 
 	r1 := bn128.MillerLoop(pre1a, pre2a)
@@ -55,10 +55,8 @@ func TestBN128Pairing(t *testing.T) {
 	g1b := bn128.G1.MulScalar(bn128.G1.G, big30)
 	g2b := bn128.G2.MulScalar(bn128.G2.G, big25)
 
-	pA, err := bn128.Pairing(g1a, g2a)
-	assert.Nil(t, err)
-	pB, err := bn128.Pairing(g1b, g2b)
-	assert.Nil(t, err)
+	pA := bn128.Pairing(g1a, g2a)
+	pB := bn128.Pairing(g1b, g2b)
 
 	assert.True(t, bn128.Fq12.Equal(pA, pB))
 
@@ -66,4 +64,25 @@ func TestBN128Pairing(t *testing.T) {
 	assert.True(t, !bytes.Equal(bn128.Fq12.Affine(pA)[0][0][0].Bytes(), big.NewInt(int64(0)).Bytes()))
 	// assert.Equal(t, pA[0][0][0].String(), "73680848340331011700282047627232219336104151861349893575958589557226556635706")
 	// assert.Equal(t, bn128.Fq12.Affine(pA)[0][0][0].String(), "8016119724813186033542830391460394070015218389456422587891475873290878009957")
+}
+
+func TestBN128Pairing2(t *testing.T) {
+	// test idea from https://bplib.readthedocs.io/en/latest/ by George Danezis
+	bn, err := NewBn128()
+	assert.Nil(t, err)
+
+	gt := bn.Pairing(bn.G1.G, bn.G2.G)
+
+	gt6 := bn.Fq12.Exp(gt, big.NewInt(int64(6)))
+
+	// e(g1, g2)^6 == e(g1, 6*g2)
+	assert.True(t, bn.Fq12.Equal(gt6, bn.Pairing(bn.G1.G, bn.G2.MulScalar(bn.G2.G, big.NewInt(int64(6))))))
+
+	// e(g1, g2)^6 == e(6* g1, g2)
+	assert.True(t, bn.Fq12.Equal(gt6, bn.Pairing(bn.G1.MulScalar(bn.G1.G, big.NewInt(int64(6))), bn.G2.G)))
+	// e(g1, g2)^6 == e(3*g1, 2*g2)
+	assert.True(t, bn.Fq12.Equal(gt6, bn.Pairing(bn.G1.MulScalar(bn.G1.G, big.NewInt(int64(3))), bn.G2.MulScalar(bn.G2.G, big.NewInt(int64(2))))))
+	// e(g1, g2)^6 == e(2*g1, 3*g2)
+	assert.True(t, bn.Fq12.Equal(gt6, bn.Pairing(bn.G1.MulScalar(bn.G1.G, big.NewInt(int64(2))), bn.G2.MulScalar(bn.G2.G, big.NewInt(int64(3))))))
+
 }
