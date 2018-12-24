@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/arnaucube/go-snark/bn128"
-	"github.com/arnaucube/go-snark/compiler"
+	"github.com/arnaucube/go-snark/circuitcompiler"
 	"github.com/arnaucube/go-snark/fields"
 	"github.com/arnaucube/go-snark/r1csqap"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +52,7 @@ func TestZk(t *testing.T) {
 
 	// wittness = 1, 3, 35, 9, 27, 30
 	w := []*big.Int{b1, b3, b35, b9, b27, b30}
-	circuit := compiler.Circuit{
+	circuit := circuitcompiler.Circuit{
 		NVars:    6,
 		NPublic:  0,
 		NSignals: len(w),
@@ -69,7 +69,7 @@ func TestZk(t *testing.T) {
 	assert.Equal(t, abc, px)
 	hz := pf.Mul(hx, zx)
 	assert.Equal(t, abc, hz)
-	
+
 	div, rem := pf.Div(px, zx)
 	assert.Equal(t, hx, div)
 	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))

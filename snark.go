@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/arnaucube/go-snark/bn128"
-	"github.com/arnaucube/go-snark/compiler"
+	"github.com/arnaucube/go-snark/circuitcompiler"
 	"github.com/arnaucube/go-snark/fields"
 	"github.com/arnaucube/go-snark/r1csqap"
 )
@@ -60,7 +60,7 @@ type Proof struct {
 	PublicSignals []*big.Int
 }
 
-func GenerateTrustedSetup(bn bn128.Bn128, fqR fields.Fq, pf r1csqap.PolynomialField, witnessLength int, circuit compiler.Circuit, alphas, betas, gammas [][]*big.Int, zx []*big.Int) (Setup, error) {
+func GenerateTrustedSetup(bn bn128.Bn128, fqR fields.Fq, pf r1csqap.PolynomialField, witnessLength int, circuit circuitcompiler.Circuit, alphas, betas, gammas [][]*big.Int, zx []*big.Int) (Setup, error) {
 	var setup Setup
 	var err error
 	// generate random t value
@@ -98,7 +98,7 @@ func GenerateTrustedSetup(bn bn128.Bn128, fqR fields.Fq, pf r1csqap.PolynomialFi
 	if err != nil {
 		return Setup{}, err
 	}
-	setup.Toxic.RhoB, err =  fqR.Rand()
+	setup.Toxic.RhoB, err = fqR.Rand()
 	if err != nil {
 		return Setup{}, err
 	}
@@ -172,7 +172,7 @@ func GenerateTrustedSetup(bn bn128.Bn128, fqR fields.Fq, pf r1csqap.PolynomialFi
 	return setup, nil
 }
 
-func GenerateProofs(bn bn128.Bn128, f fields.Fq, circuit compiler.Circuit, setup Setup, hx []*big.Int, w []*big.Int) (Proof, error) {
+func GenerateProofs(bn bn128.Bn128, f fields.Fq, circuit circuitcompiler.Circuit, setup Setup, hx []*big.Int, w []*big.Int) (Proof, error) {
 	var proof Proof
 	proof.PiA = [3]*big.Int{bn.G1.F.Zero(), bn.G1.F.Zero(), bn.G1.F.Zero()}
 	proof.PiAp = [3]*big.Int{bn.G1.F.Zero(), bn.G1.F.Zero(), bn.G1.F.Zero()}
@@ -206,7 +206,7 @@ func GenerateProofs(bn bn128.Bn128, f fields.Fq, circuit compiler.Circuit, setup
 	return proof, nil
 }
 
-func VerifyProof(bn bn128.Bn128, circuit compiler.Circuit, setup Setup, proof Proof) bool {
+func VerifyProof(bn bn128.Bn128, circuit circuitcompiler.Circuit, setup Setup, proof Proof) bool {
 
 	// e(piA, Va) == e(piA', g2)
 	pairingPiaVa := bn.Pairing(proof.PiA, setup.Vk.Vka)
@@ -262,7 +262,7 @@ func VerifyProof(bn bn128.Bn128, circuit compiler.Circuit, setup Setup, proof Pr
 	if !bn.Fq12.Equal(pairingL, pairingR) {
 		return false
 	} else {
-	fmt.Println("✓ e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB) == e(piK, g2Kgamma)")
+		fmt.Println("✓ e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB) == e(piK, g2Kgamma)")
 	}
 
 	return true
