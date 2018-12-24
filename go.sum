@@ -1,9 +1,3 @@
-github.com/arnaucube/bn128 v0.0.0-20181124004642-3bb6b68ddbe4/go.mod h1:bIKGJe1ZaHy7HYQML7Me4q38pOpggn3JO1VPPyMe3zI=
-github.com/arnaucube/cryptofun v0.0.0-20181124001128-d55d875d7a54/go.mod h1:PZE8kKpHPD1UMrS3mTfAMmEEinGtijSwjxLRqRcD64A=
-github.com/arnaucube/cryptofun v0.0.0-20181124004321-9b11ae8280bd/go.mod h1:PZE8kKpHPD1UMrS3mTfAMmEEinGtijSwjxLRqRcD64A=
-github.com/arnaucube/cryptofun v0.0.0-20181210231954-f5d913b6a74c h1:i0PwrCdHaQXw6KhbIS+VVj1x/GmqHgOs/LCXLeevE3c=
-github.com/arnaucube/cryptofun v0.0.0-20181210231954-f5d913b6a74c/go.mod h1:jLYDEjM/9/Q/bpdj+9ZdKh2qDIgS2gqcywjg+93MyGI=
-github.com/arnaucube/go-snark v0.0.0-20181207210027-19f7216d0e3d/go.mod h1:gLycS/B43DufBaH0jH8kqiE4A7w5FdOM8I9S416xh2Y=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

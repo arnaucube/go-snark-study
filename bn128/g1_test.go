@@ -1,10 +1,10 @@
 package bn128
 
 import (
+	"encoding/hex"
 	"math/big"
 	"testing"
 
-	"github.com/arnaucube/cryptofun/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -26,6 +26,6 @@ func TestG1(t *testing.T) {
 	a := bn128.G1.Affine(grsum1)
 	b := bn128.G1.Affine(grsum2)
 	assert.Equal(t, a, b)
-	assert.Equal(t, "0x2f978c0ab89ebaa576866706b14787f360c4d6c3869efe5a72f7c3651a72ff00", utils.BytesToHex(a[0].Bytes()))
-	assert.Equal(t, "0x12e4ba7f0edca8b4fa668fe153aebd908d322dc26ad964d4cd314795844b62b2", utils.BytesToHex(a[1].Bytes()))
+	assert.Equal(t, "2f978c0ab89ebaa576866706b14787f360c4d6c3869efe5a72f7c3651a72ff00", hex.EncodeToString(a[0].Bytes()))
+	assert.Equal(t, "12e4ba7f0edca8b4fa668fe153aebd908d322dc26ad964d4cd314795844b62b2", hex.EncodeToString(a[1].Bytes()))
 }

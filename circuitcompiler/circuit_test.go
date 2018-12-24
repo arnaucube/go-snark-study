@@ -21,16 +21,22 @@ func TestCircuitParser(t *testing.T) {
 			m3 = m2 + s1
 			out = m3 + 5
 	*/
-	raw := `
-	y = x^x
-	z = x + y
-	out = z + 5
-	`
-	parser := NewParser(strings.NewReader(raw))
-	res, err := parser.Parse()
-	assert.Nil(t, err)
-	fmt.Println(res)
 
 	// flat code
+	flat := `
+	func test(x):
+		aux = x*x
+		y = aux*x
+		z = x + y
+		out = z + 5
+	`
+	parser := NewParser(strings.NewReader(flat))
+	circuit, err := parser.Parse()
+	assert.Nil(t, err)
+	fmt.Println(circuit)
+
 	// flat code to R1CS
+	fmt.Println("generating R1CS from flat code")
+	circuit.GenerateR1CS()
+	fmt.Println(circuit.Inputs)
 }
