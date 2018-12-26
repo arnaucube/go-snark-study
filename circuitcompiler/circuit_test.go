@@ -2,6 +2,7 @@ package circuitcompiler
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 	"testing"
 
@@ -37,6 +38,40 @@ func TestCircuitParser(t *testing.T) {
 
 	// flat code to R1CS
 	fmt.Println("generating R1CS from flat code")
-	circuit.GenerateR1CS()
+	a, b, c := circuit.GenerateR1CS()
+	fmt.Print("function with inputs: ")
 	fmt.Println(circuit.Inputs)
+
+	fmt.Print("signals: ")
+	fmt.Println(circuit.Signals)
+
+	// expected result
+	b0 := big.NewInt(int64(0))
+	b1 := big.NewInt(int64(1))
+	b5 := big.NewInt(int64(5))
+	aExpected := [][]*big.Int{
+		[]*big.Int{b0, b1, b0, b0, b0, b0},
+		[]*big.Int{b0, b0, b0, b1, b0, b0},
+		[]*big.Int{b0, b1, b0, b0, b1, b0},
+		[]*big.Int{b5, b0, b0, b0, b0, b1},
+	}
+	bExpected := [][]*big.Int{
+		[]*big.Int{b0, b1, b0, b0, b0, b0},
+		[]*big.Int{b0, b1, b0, b0, b0, b0},
+		[]*big.Int{b1, b0, b0, b0, b0, b0},
+		[]*big.Int{b1, b0, b0, b0, b0, b0},
+	}
+	cExpected := [][]*big.Int{
+		[]*big.Int{b0, b0, b0, b1, b0, b0},
+		[]*big.Int{b0, b0, b0, b0, b1, b0},
+		[]*big.Int{b0, b0, b0, b0, b0, b1},
+		[]*big.Int{b0, b0, b1, b0, b0, b0},
+	}
+
+	assert.Equal(t, aExpected, a)
+	assert.Equal(t, bExpected, b)
+	assert.Equal(t, cExpected, c)
+	fmt.Println(a)
+	fmt.Println(b)
+	fmt.Println(c)
 }

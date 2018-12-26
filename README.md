@@ -30,24 +30,36 @@ fqR := fields.NewFq(bn.R)
 // new Polynomial Field
 pf := r1csqap.NewPolynomialField(f)
 
-/*
-suppose that we have the following variables with *big.Int elements:
-a = [[0 1 0 0 0 0] [0 0 0 1 0 0] [0 1 0 0 1 0] [5 0 0 0 0 1]]
-b = [[0 1 0 0 0 0] [0 1 0 0 0 0] [1 0 0 0 0 0] [1 0 0 0 0 0]]
-c = [[0 0 0 1 0 0] [0 0 0 0 1 0] [0 0 0 0 0 1] [0 0 1 0 0 0]]
+// compile circuit and get the R1CS
+flatCode := `
+func test(x):
+	aux = x*x
+	y = aux*x
+	z = x + y
+	out = z + 5
+`
+// parse the code
+parser := circuitcompiler.NewParser(strings.NewReader(flatCode))
+circuit, err := parser.Parse()
+assert.Nil(t, err)
+fmt.Println(circuit)
+// flat code to R1CS
+fmt.Println("generating R1CS from flat code")
+a, b, c := circuit.GenerateR1CS()
 
-w = [1, 3, 35, 9, 27, 30]
+/*
+now we have the R1CS from the circuit:
+a == [[0 1 0 0 0 0] [0 0 0 1 0 0] [0 1 0 0 1 0] [5 0 0 0 0 1]]
+b == [[0 1 0 0 0 0] [0 1 0 0 0 0] [1 0 0 0 0 0] [1 0 0 0 0 0]]
+c == [[0 0 0 1 0 0] [0 0 0 0 1 0] [0 0 0 0 0 1] [0 0 1 0 0 0]]
 */
+
 
 alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
 
 // wittness = 1, 3, 35, 9, 27, 30
 w := []*big.Int{b1, b3, b35, b9, b27, b30}
-circuit := compiler.Circuit{
-	NVars:    6,
-	NPublic:  0,
-	NSignals: len(w),
-}
+
 ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
 
 hx := pf.DivisorPolinomial(px, zx)

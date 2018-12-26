@@ -16,17 +16,6 @@ type Parser struct {
 	}
 }
 
-type Constraint struct {
-	// v1 op v2 = out
-	Op      Token
-	V1      string
-	V2      string
-	Out     string
-	Literal string
-
-	Inputs []string // in func delcaration case
-}
-
 func NewParser(r io.Reader) *Parser {
 	return &Parser{s: NewScanner(r)}
 }
@@ -90,7 +79,8 @@ func (p *Parser) ParseLine() (*Constraint, error) {
 	c.V1 = lit
 	c.Literal += lit
 	// operator
-	c.Op, lit = p.scanIgnoreWhitespace()
+	_, lit = p.scanIgnoreWhitespace()
+	c.Op = lit
 	c.Literal += lit
 	// v2
 	_, lit = p.scanIgnoreWhitespace()
@@ -102,6 +92,15 @@ func (p *Parser) ParseLine() (*Constraint, error) {
 	return c, nil
 }
 
+func existInArray(arr []string, elem string) bool {
+	for _, v := range arr {
+		if v == elem {
+			return true
+		}
+	}
+	return false
+}
+
 func addToArrayIfNotExist(arr []string, elem string) []string {
 	for _, v := range arr {
 		if v == elem {
@@ -111,22 +110,61 @@ func addToArrayIfNotExist(arr []string, elem string) []string {
 	arr = append(arr, elem)
 	return arr
 }
+
 func (p *Parser) Parse() (*Circuit, error) {
 	circuit := &Circuit{}
 	circuit.Signals = append(circuit.Signals, "one")
+	nInputs := 0
 	for {
 		constraint, err := p.ParseLine()
 		if err != nil {
 			break
 		}
 		if constraint.Literal == "func" {
+			// one constraint for each input
+			for _, in := range constraint.Inputs {
+				newConstr := &Constraint{
+					Op:  "in",
+					Out: in,
+				}
+				circuit.Constraints = append(circuit.Constraints, *newConstr)
+				nInputs++
+			}
 			circuit.Inputs = constraint.Inputs
 			continue
 		}
 		circuit.Constraints = append(circuit.Constraints, *constraint)
-		circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.V1)
-		circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.V2)
-		circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.Out)
+		isVal, _ := isValue(constraint.V1)
+		if !isVal {
+			circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.V1)
+		}
+		isVal, _ = isValue(constraint.V2)
+		if !isVal {
+			circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.V2)
+		}
+		if constraint.Out == "out" {
+			// if Out is "out", put it after the inputs
+			if !existInArray(circuit.Signals, constraint.Out) {
+				signalsCopy := copyArray(circuit.Signals)
+				var auxSignals []string
+				auxSignals = append(auxSignals, signalsCopy[0:nInputs+1]...)
+				auxSignals = append(auxSignals, constraint.Out)
+				auxSignals = append(auxSignals, signalsCopy[nInputs+1:]...)
+				circuit.Signals = auxSignals
+			}
+		} else {
+			circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.Out)
+		}
 	}
+	circuit.NVars = len(circuit.Signals)
+	circuit.NSignals = len(circuit.Signals)
+	circuit.NPublic = 0
 	return circuit, nil
+}
+func copyArray(in []string) []string { // tmp
+	var out []string
+	for _, e := range in {
+		out = append(out, e)
+	}
+	return out
 }
