@@ -7,6 +7,7 @@ import (
 	"github.com/arnaucube/go-snark/fields"
 )
 
+// Bn128 is the data structure of the BN128
 type Bn128 struct {
 	Q             *big.Int
 	R             *big.Int
@@ -33,6 +34,7 @@ type Bn128 struct {
 	FinalExp           *big.Int
 }
 
+// NewBn128 returns the BN128
 func NewBn128() (Bn128, error) {
 	var b Bn128
 	q, ok := new(big.Int).SetString("21888242871839275222246405745257275088696311157297823662689037894645226208583", 10)
@@ -105,6 +107,7 @@ func NewBn128() (Bn128, error) {
 	return b, nil
 }
 
+// NewFqR returns a new Finite Field over R
 func NewFqR() (fields.Fq, error) {
 	r, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
 	if !ok {
@@ -172,12 +175,13 @@ func (bn128 *Bn128) preparePairing() error {
 
 }
 
+// Pairing calculates the BN128 Pairing of two given values
 func (bn128 Bn128) Pairing(p1 [3]*big.Int, p2 [3][2]*big.Int) [2][3][2]*big.Int {
-	pre1 := bn128.PreComputeG1(p1)
-	pre2 := bn128.PreComputeG2(p2)
+	pre1 := bn128.preComputeG1(p1)
+	pre2 := bn128.preComputeG2(p2)
 
 	r1 := bn128.MillerLoop(pre1, pre2)
-	res := bn128.FinalExponentiation(r1)
+	res := bn128.finalExponentiation(r1)
 	return res
 }
 
@@ -186,7 +190,7 @@ type AteG1Precomp struct {
 	Py *big.Int
 }
 
-func (bn128 Bn128) PreComputeG1(p [3]*big.Int) AteG1Precomp {
+func (bn128 Bn128) preComputeG1(p [3]*big.Int) AteG1Precomp {
 	pCopy := bn128.G1.Affine(p)
 	res := AteG1Precomp{
 		Px: pCopy[0],
@@ -206,7 +210,7 @@ type AteG2Precomp struct {
 	Coeffs []EllCoeffs
 }
 
-func (bn128 Bn128) PreComputeG2(p [3][2]*big.Int) AteG2Precomp {
+func (bn128 Bn128) preComputeG2(p [3][2]*big.Int) AteG2Precomp {
 	qCopy := bn128.G2.Affine(p)
 	res := AteG2Precomp{
 		qCopy[0],
@@ -222,20 +226,20 @@ func (bn128 Bn128) PreComputeG2(p [3][2]*big.Int) AteG2Precomp {
 	for i := bn128.LoopCount.BitLen() - 2; i >= 0; i-- {
 		bit := bn128.LoopCount.Bit(i)
 
-		c, r = bn128.DoublingStep(r)
+		c, r = bn128.doublingStep(r)
 		res.Coeffs = append(res.Coeffs, c)
 		if bit == 1 {
-			c, r = bn128.MixedAdditionStep(qCopy, r)
+			c, r = bn128.mixedAdditionStep(qCopy, r)
 			res.Coeffs = append(res.Coeffs, c)
 		}
 	}
 
-	q1 := bn128.G2.Affine(bn128.G2MulByQ(qCopy))
+	q1 := bn128.G2.Affine(bn128.g2MulByQ(qCopy))
 	if !bn128.Fq2.Equal(q1[2], bn128.Fq2.One()) {
 		// return res, errors.New("q1[2] != Fq2.One")
 		panic(errors.New("q1[2] != Fq2.One()"))
 	}
-	q2 := bn128.G2.Affine(bn128.G2MulByQ(q1))
+	q2 := bn128.G2.Affine(bn128.g2MulByQ(q1))
 	if !bn128.Fq2.Equal(q2[2], bn128.Fq2.One()) {
 		// return res, errors.New("q2[2] != Fq2.One")
 		panic(errors.New("q2[2] != Fq2.One()"))
@@ -246,16 +250,16 @@ func (bn128 Bn128) PreComputeG2(p [3][2]*big.Int) AteG2Precomp {
 	}
 	q2[1] = bn128.Fq2.Neg(q2[1])
 
-	c, r = bn128.MixedAdditionStep(q1, r)
+	c, r = bn128.mixedAdditionStep(q1, r)
 	res.Coeffs = append(res.Coeffs, c)
 
-	c, r = bn128.MixedAdditionStep(q2, r)
+	c, r = bn128.mixedAdditionStep(q2, r)
 	res.Coeffs = append(res.Coeffs, c)
 
 	return res
 }
 
-func (bn128 Bn128) DoublingStep(current [3][2]*big.Int) (EllCoeffs, [3][2]*big.Int) {
+func (bn128 Bn128) doublingStep(current [3][2]*big.Int) (EllCoeffs, [3][2]*big.Int) {
 	x := current[0]
 	y := current[1]
 	z := current[2]
@@ -286,7 +290,7 @@ func (bn128 Bn128) DoublingStep(current [3][2]*big.Int) (EllCoeffs, [3][2]*big.I
 	return res, current
 }
 
-func (bn128 Bn128) MixedAdditionStep(base, current [3][2]*big.Int) (EllCoeffs, [3][2]*big.Int) {
+func (bn128 Bn128) mixedAdditionStep(base, current [3][2]*big.Int) (EllCoeffs, [3][2]*big.Int) {
 	x1 := current[0]
 	y1 := current[1]
 	z1 := current[2]
@@ -320,7 +324,7 @@ func (bn128 Bn128) MixedAdditionStep(base, current [3][2]*big.Int) (EllCoeffs, [
 	}
 	return coef, current
 }
-func (bn128 Bn128) G2MulByQ(p [3][2]*big.Int) [3][2]*big.Int {
+func (bn128 Bn128) g2MulByQ(p [3][2]*big.Int) [3][2]*big.Int {
 	fmx := [2]*big.Int{
 		p[0][0],
 		bn128.Fq1.Mul(p[0][1], bn128.Fq1.Copy(bn128.FrobeniusCoeffsC11)),
@@ -356,7 +360,7 @@ func (bn128 Bn128) MillerLoop(pre1 AteG1Precomp, pre2 AteG2Precomp) [2][3][2]*bi
 		idx++
 		f = bn128.Fq12.Square(f)
 
-		f = bn128.MulBy024(f,
+		f = bn128.mulBy024(f,
 			c.Ell0,
 			bn128.Fq2.MulScalar(c.EllVW, pre1.Py),
 			bn128.Fq2.MulScalar(c.EllVV, pre1.Px))
@@ -364,7 +368,7 @@ func (bn128 Bn128) MillerLoop(pre1 AteG1Precomp, pre2 AteG2Precomp) [2][3][2]*bi
 		if bit == 1 {
 			c = pre2.Coeffs[idx]
 			idx++
-			f = bn128.MulBy024(
+			f = bn128.mulBy024(
 				f,
 				c.Ell0,
 				bn128.Fq2.MulScalar(c.EllVW, pre1.Py),
@@ -377,7 +381,7 @@ func (bn128 Bn128) MillerLoop(pre1 AteG1Precomp, pre2 AteG2Precomp) [2][3][2]*bi
 
 	c = pre2.Coeffs[idx]
 	idx++
-	f = bn128.MulBy024(
+	f = bn128.mulBy024(
 		f,
 		c.Ell0,
 		bn128.Fq2.MulScalar(c.EllVW, pre1.Py),
@@ -386,7 +390,7 @@ func (bn128 Bn128) MillerLoop(pre1 AteG1Precomp, pre2 AteG2Precomp) [2][3][2]*bi
 	c = pre2.Coeffs[idx]
 	idx++
 
-	f = bn128.MulBy024(
+	f = bn128.mulBy024(
 		f,
 		c.Ell0,
 		bn128.Fq2.MulScalar(c.EllVW, pre1.Py),
@@ -395,7 +399,7 @@ func (bn128 Bn128) MillerLoop(pre1 AteG1Precomp, pre2 AteG2Precomp) [2][3][2]*bi
 	return f
 }
 
-func (bn128 Bn128) MulBy024(a [2][3][2]*big.Int, ell0, ellVW, ellVV [2]*big.Int) [2][3][2]*big.Int {
+func (bn128 Bn128) mulBy024(a [2][3][2]*big.Int, ell0, ellVW, ellVV [2]*big.Int) [2][3][2]*big.Int {
 	b := [2][3][2]*big.Int{
 		[3][2]*big.Int{
 			ell0,
@@ -411,7 +415,7 @@ func (bn128 Bn128) MulBy024(a [2][3][2]*big.Int, ell0, ellVW, ellVV [2]*big.Int)
 	return bn128.Fq12.Mul(a, b)
 }
 
-func (bn128 Bn128) FinalExponentiation(r [2][3][2]*big.Int) [2][3][2]*big.Int {
+func (bn128 Bn128) finalExponentiation(r [2][3][2]*big.Int) [2][3][2]*big.Int {
 	res := bn128.Fq12.Exp(r, bn128.FinalExp)
 	return res
 }

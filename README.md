@@ -11,6 +11,20 @@ Implementation from scratch in Go to understand the concepts. Do not use in prod
 
 Not finished, implementing this in my free time to understand it better, so I don't have much time.
 
+Current implementation status:
+- [x] Finite Fields (1, 2, 6, 12) operations
+- [x] G1 and G2 operations
+- [x] BN128 Pairing
+- [x] circuit code compiler
+	- [ ] code to flat code
+	- [x] flat code compiler
+- [x] circuit to R1CS
+- [x] polynomial operations
+- [x] R1CS to QAP
+- [x] generate trusted setup
+- [x] generate proofs
+- [x] verify proofs with BN128 pairing
+
 
 ### Usage
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark?status.svg)](https://godoc.org/github.com/arnaucube/go-snark) zkSnark
@@ -57,8 +71,11 @@ c == [[0 0 0 1 0 0] [0 0 0 0 1 0] [0 0 0 0 0 1] [0 0 1 0 0 0]]
 
 alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
 
-// wittness = 1, 3, 35, 9, 27, 30
-w := []*big.Int{b1, b3, b35, b9, b27, b30}
+// wittness
+b3 := big.NewInt(int64(3))
+inputs := []*big.Int{b3}
+w := circuit.CalculateWitness(inputs)
+fmt.Println("\nwitness", w)
 
 ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
 

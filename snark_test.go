@@ -13,6 +13,78 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestZkFromFlatCircuitCode(t *testing.T) {
+	bn, err := bn128.NewBn128()
+	assert.Nil(t, err)
+
+	// new Finite Field
+	fqR := fields.NewFq(bn.R)
+
+	// new Polynomial Field
+	pf := r1csqap.NewPolynomialField(fqR)
+
+	// compile circuit and get the R1CS
+	flatCode := `
+	func test(x):
+		aux = x*x
+		y = aux*x
+		z = x + y
+		out = z + 5
+	`
+	fmt.Print("\nflat code of the circuit:")
+	fmt.Println(flatCode)
+
+	// parse the code
+	parser := circuitcompiler.NewParser(strings.NewReader(flatCode))
+	circuit, err := parser.Parse()
+	assert.Nil(t, err)
+	fmt.Println("\ncircuit data:", circuit)
+
+	b3 := big.NewInt(int64(3))
+	inputs := []*big.Int{b3}
+	// wittness
+	w := circuit.CalculateWitness(inputs)
+	fmt.Println("\nwitness", w)
+
+	// flat code to R1CS
+	fmt.Println("\ngenerating R1CS from flat code")
+	a, b, c := circuit.GenerateR1CS()
+	fmt.Println("\nR1CS:")
+	fmt.Println("a:", a)
+	fmt.Println("b:", b)
+	fmt.Println("c:", c)
+
+	alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
+
+	ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
+
+	hx := pf.DivisorPolinomial(px, zx)
+
+	// hx==px/zx so px==hx*zx
+	assert.Equal(t, px, pf.Mul(hx, zx))
+
+	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
+	abc := pf.Sub(pf.Mul(ax, bx), cx)
+	assert.Equal(t, abc, px)
+	hz := pf.Mul(hx, zx)
+	assert.Equal(t, abc, hz)
+
+	div, rem := pf.Div(px, zx)
+	assert.Equal(t, hx, div)
+	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
+
+	// calculate trusted setup
+	setup, err := GenerateTrustedSetup(bn, fqR, pf, len(w), *circuit, alphas, betas, gammas, zx)
+	assert.Nil(t, err)
+	fmt.Println("\nt:", setup.Toxic.T)
+
+	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
+	proof, err := GenerateProofs(bn, fqR, *circuit, setup, hx, w)
+	assert.Nil(t, err)
+
+	assert.True(t, VerifyProof(bn, *circuit, setup, proof))
+}
+
 func TestZkFromHardcodedR1CS(t *testing.T) {
 	bn, err := bn128.NewBn128()
 	assert.Nil(t, err)
@@ -85,71 +157,4 @@ func TestZkFromHardcodedR1CS(t *testing.T) {
 	assert.Nil(t, err)
 
 	assert.True(t, VerifyProof(bn, circuit, setup, proof))
-}
-
-func TestZkFromFlatCircuitCode(t *testing.T) {
-	bn, err := bn128.NewBn128()
-	assert.Nil(t, err)
-
-	// new Finite Field
-	fqR := fields.NewFq(bn.R)
-
-	// new Polynomial Field
-	pf := r1csqap.NewPolynomialField(fqR)
-
-	// compile circuit and get the R1CS
-	flatCode := `
-	func test(x):
-		aux = x*x
-		y = aux*x
-		z = x + y
-		out = z + 5
-	`
-	// parse the code
-	parser := circuitcompiler.NewParser(strings.NewReader(flatCode))
-	circuit, err := parser.Parse()
-	assert.Nil(t, err)
-	fmt.Println(circuit)
-	// flat code to R1CS
-	fmt.Println("generating R1CS from flat code")
-	a, b, c := circuit.GenerateR1CS()
-
-	alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
-
-	// wittness = 1, 3, 35, 9, 27, 30
-	b1 := big.NewInt(int64(1))
-	b3 := big.NewInt(int64(3))
-	b9 := big.NewInt(int64(9))
-	b27 := big.NewInt(int64(27))
-	b30 := big.NewInt(int64(30))
-	b35 := big.NewInt(int64(35))
-	w := []*big.Int{b1, b3, b35, b9, b27, b30}
-
-	ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
-
-	hx := pf.DivisorPolinomial(px, zx)
-
-	// hx==px/zx so px==hx*zx
-	assert.Equal(t, px, pf.Mul(hx, zx))
-
-	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
-	abc := pf.Sub(pf.Mul(ax, bx), cx)
-	assert.Equal(t, abc, px)
-	hz := pf.Mul(hx, zx)
-	assert.Equal(t, abc, hz)
-
-	div, rem := pf.Div(px, zx)
-	assert.Equal(t, hx, div)
-	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
-
-	// calculate trusted setup
-	setup, err := GenerateTrustedSetup(bn, fqR, pf, len(w), *circuit, alphas, betas, gammas, zx)
-	assert.Nil(t, err)
-	fmt.Println("t", setup.Toxic.T)
-
-	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	proof, err := GenerateProofs(bn, fqR, *circuit, setup, hx, w)
-	assert.Nil(t, err)
-
-	assert.True(t, VerifyProof(bn, *circuit, setup, proof))
 }

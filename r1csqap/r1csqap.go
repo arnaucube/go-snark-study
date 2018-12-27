@@ -6,6 +6,7 @@ import (
 	"github.com/arnaucube/go-snark/fields"
 )
 
+// Transpose transposes the *big.Int matrix
 func Transpose(matrix [][]*big.Int) [][]*big.Int {
 	var r [][]*big.Int
 	for i := 0; i < len(matrix[0]); i++ {
@@ -18,6 +19,7 @@ func Transpose(matrix [][]*big.Int) [][]*big.Int {
 	return r
 }
 
+// ArrayOfBigZeros creates a *big.Int array with n elements to zero
 func ArrayOfBigZeros(num int) []*big.Int {
 	bigZero := big.NewInt(int64(0))
 	var r []*big.Int
@@ -27,15 +29,19 @@ func ArrayOfBigZeros(num int) []*big.Int {
 	return r
 }
 
+// PolynomialField is the Polynomial over a Finite Field where the polynomial operations are performed
 type PolynomialField struct {
 	F fields.Fq
 }
 
+// NewPolynomialField creates a new PolynomialField with the given FiniteField
 func NewPolynomialField(f fields.Fq) PolynomialField {
 	return PolynomialField{
 		f,
 	}
 }
+
+// Mul multiplies two polinomials over the Finite Field
 func (pf PolynomialField) Mul(a, b []*big.Int) []*big.Int {
 	r := ArrayOfBigZeros(len(a) + len(b) - 1)
 	for i := 0; i < len(a); i++ {
@@ -47,6 +53,8 @@ func (pf PolynomialField) Mul(a, b []*big.Int) []*big.Int {
 	}
 	return r
 }
+
+// Div divides two polinomials over the Finite Field, returning the result and the remainder
 func (pf PolynomialField) Div(a, b []*big.Int) ([]*big.Int, []*big.Int) {
 	// https://en.wikipedia.org/wiki/Division_algorithm
 	r := ArrayOfBigZeros(len(a) - len(b) + 1)
@@ -70,6 +78,7 @@ func max(a, b int) int {
 	return b
 }
 
+// Add adds two polinomials over the Finite Field
 func (pf PolynomialField) Add(a, b []*big.Int) []*big.Int {
 	r := ArrayOfBigZeros(max(len(a), len(b)))
 	for i := 0; i < len(a); i++ {
@@ -81,6 +90,7 @@ func (pf PolynomialField) Add(a, b []*big.Int) []*big.Int {
 	return r
 }
 
+// Sub substracts two polinomials over the Finite Field
 func (pf PolynomialField) Sub(a, b []*big.Int) []*big.Int {
 	r := ArrayOfBigZeros(max(len(a), len(b)))
 	for i := 0; i < len(a); i++ {
@@ -92,6 +102,7 @@ func (pf PolynomialField) Sub(a, b []*big.Int) []*big.Int {
 	return r
 }
 
+// Eval evaluates the polinomial over the Finite Field at the given value x
 func (pf PolynomialField) Eval(v []*big.Int, x *big.Int) *big.Int {
 	r := big.NewInt(int64(0))
 	for i := 0; i < len(v); i++ {
@@ -102,6 +113,7 @@ func (pf PolynomialField) Eval(v []*big.Int, x *big.Int) *big.Int {
 	return r
 }
 
+// NewPolZeroAt generates a new polynomial that has value zero at the given value
 func (pf PolynomialField) NewPolZeroAt(pointPos, totalPoints int, height *big.Int) []*big.Int {
 	fac := 1
 	for i := 1; i < totalPoints+1; i++ {
@@ -122,6 +134,7 @@ func (pf PolynomialField) NewPolZeroAt(pointPos, totalPoints int, height *big.In
 	return r
 }
 
+// LagrangeInterpolation performs the Lagrange Interpolation / Lagrange Polynomials operation
 func (pf PolynomialField) LagrangeInterpolation(v []*big.Int) []*big.Int {
 	// https://en.wikipedia.org/wiki/Lagrange_polynomial
 	var r []*big.Int
@@ -132,6 +145,7 @@ func (pf PolynomialField) LagrangeInterpolation(v []*big.Int) []*big.Int {
 	return r
 }
 
+// R1CSToQAP converts the R1CS values to the QAP values
 func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*big.Int, [][]*big.Int, []*big.Int) {
 	aT := Transpose(a)
 	bT := Transpose(b)
@@ -157,6 +171,7 @@ func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*bi
 	return alphas, betas, gammas, z
 }
 
+// CombinePolynomials combine the given polynomials arrays into one, also returns the P(x)
 func (pf PolynomialField) CombinePolynomials(r []*big.Int, ap, bp, cp [][]*big.Int) ([]*big.Int, []*big.Int, []*big.Int, []*big.Int) {
 	var alpha []*big.Int
 	for i := 0; i < len(r); i++ {
@@ -178,6 +193,7 @@ func (pf PolynomialField) CombinePolynomials(r []*big.Int, ap, bp, cp [][]*big.I
 	return alpha, beta, gamma, px
 }
 
+// DivisorPolynomial returns the divisor polynomial given two polynomials
 func (pf PolynomialField) DivisorPolinomial(px, z []*big.Int) []*big.Int {
 	quo, _ := pf.Div(px, z)
 	return quo

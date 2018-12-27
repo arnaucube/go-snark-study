@@ -74,4 +74,10 @@ func TestCircuitParser(t *testing.T) {
 	fmt.Println(a)
 	fmt.Println(b)
 	fmt.Println(c)
+
+	b3 := big.NewInt(int64(3))
+	inputs := []*big.Int{b3}
+	// Calculate Witness
+	w := circuit.CalculateWitness(inputs)
+	fmt.Println("w", w)
 }

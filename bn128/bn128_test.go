@@ -21,11 +21,11 @@ func TestBN128(t *testing.T) {
 	g1b := bn128.G1.MulScalar(bn128.G1.G, bn128.Fq1.Copy(big75))
 	g2b := bn128.G2.MulScalar(bn128.G2.G, bn128.Fq1.Copy(big40))
 
-	pre1a := bn128.PreComputeG1(g1a)
-	pre2a := bn128.PreComputeG2(g2a)
+	pre1a := bn128.preComputeG1(g1a)
+	pre2a := bn128.preComputeG2(g2a)
 	assert.Nil(t, err)
-	pre1b := bn128.PreComputeG1(g1b)
-	pre2b := bn128.PreComputeG2(g2b)
+	pre1b := bn128.preComputeG1(g1b)
+	pre2b := bn128.preComputeG2(g2b)
 	assert.Nil(t, err)
 
 	r1 := bn128.MillerLoop(pre1a, pre2a)
@@ -33,7 +33,7 @@ func TestBN128(t *testing.T) {
 
 	rbe := bn128.Fq12.Mul(r1, bn128.Fq12.Inverse(r2))
 
-	res := bn128.FinalExponentiation(rbe)
+	res := bn128.finalExponentiation(rbe)
 
 	a := bn128.Fq12.Affine(res)
 	b := bn128.Fq12.Affine(bn128.Fq12.One())

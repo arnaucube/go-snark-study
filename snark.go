@@ -11,6 +11,7 @@ import (
 	"github.com/arnaucube/go-snark/r1csqap"
 )
 
+// Setup is the data structure holding the Trusted Setup data. The Setup.Toxic sub struct must be destroyed after the GenerateTrustedSetup function is completed
 type Setup struct {
 	Toxic struct {
 		T      *big.Int // trusted setup secret
@@ -48,6 +49,7 @@ type Setup struct {
 	}
 }
 
+// Proof contains the parameters to proof the zkSNARK
 type Proof struct {
 	PiA           [3]*big.Int
 	PiAp          [3]*big.Int
@@ -60,6 +62,7 @@ type Proof struct {
 	PublicSignals []*big.Int
 }
 
+// GenerateTrustedSetup generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
 func GenerateTrustedSetup(bn bn128.Bn128, fqR fields.Fq, pf r1csqap.PolynomialField, witnessLength int, circuit circuitcompiler.Circuit, alphas, betas, gammas [][]*big.Int, zx []*big.Int) (Setup, error) {
 	var setup Setup
 	var err error
@@ -172,6 +175,7 @@ func GenerateTrustedSetup(bn bn128.Bn128, fqR fields.Fq, pf r1csqap.PolynomialFi
 	return setup, nil
 }
 
+// GenerateProofs generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
 func GenerateProofs(bn bn128.Bn128, f fields.Fq, circuit circuitcompiler.Circuit, setup Setup, hx []*big.Int, w []*big.Int) (Proof, error) {
 	var proof Proof
 	proof.PiA = [3]*big.Int{bn.G1.F.Zero(), bn.G1.F.Zero(), bn.G1.F.Zero()}
@@ -206,6 +210,7 @@ func GenerateProofs(bn bn128.Bn128, f fields.Fq, circuit circuitcompiler.Circuit
 	return proof, nil
 }
 
+// VerifyProof verifies over the BN128 the Pairings of the Proof
 func VerifyProof(bn bn128.Bn128, circuit circuitcompiler.Circuit, setup Setup, proof Proof) bool {
 
 	// e(piA, Va) == e(piA', g2)

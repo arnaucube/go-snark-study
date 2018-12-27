@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Parser data structure holds the Scanner and the Parsing functions
 type Parser struct {
 	s   *Scanner
 	buf struct {
@@ -16,6 +17,7 @@ type Parser struct {
 	}
 }
 
+// NewParser creates a new parser from a io.Reader
 func NewParser(r io.Reader) *Parser {
 	return &Parser{s: NewScanner(r)}
 }
@@ -26,7 +28,7 @@ func (p *Parser) scan() (tok Token, lit string) {
 		p.buf.n = 0
 		return p.buf.tok, p.buf.lit
 	}
-	tok, lit = p.s.Scan()
+	tok, lit = p.s.scan()
 
 	p.buf.tok, p.buf.lit = tok, lit
 
@@ -45,7 +47,8 @@ func (p *Parser) scanIgnoreWhitespace() (tok Token, lit string) {
 	return
 }
 
-func (p *Parser) ParseLine() (*Constraint, error) {
+// parseLine parses the current line
+func (p *Parser) parseLine() (*Constraint, error) {
 	/*
 		in this version,
 		line will be for example s3 = s1 * s4
@@ -111,12 +114,13 @@ func addToArrayIfNotExist(arr []string, elem string) []string {
 	return arr
 }
 
+// Parse parses the lines and returns the compiled Circuit
 func (p *Parser) Parse() (*Circuit, error) {
 	circuit := &Circuit{}
 	circuit.Signals = append(circuit.Signals, "one")
 	nInputs := 0
 	for {
-		constraint, err := p.ParseLine()
+		constraint, err := p.parseLine()
 		if err != nil {
 			break
 		}

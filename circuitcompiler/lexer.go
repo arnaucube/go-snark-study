@@ -42,10 +42,12 @@ func isDigit(ch rune) bool {
 	return (ch >= '0' && ch <= '9')
 }
 
+// Scanner holds the bufio.Reader
 type Scanner struct {
 	r *bufio.Reader
 }
 
+// NewScanner creates a new Scanner with the given io.Reader
 func NewScanner(r io.Reader) *Scanner {
 	return &Scanner{r: bufio.NewReader(r)}
 }
@@ -62,7 +64,8 @@ func (s *Scanner) unread() {
 	_ = s.r.UnreadRune()
 }
 
-func (s *Scanner) Scan() (tok Token, lit string) {
+// Scan returns the Token and literal string of the current value
+func (s *Scanner) scan() (tok Token, lit string) {
 	ch := s.read()
 
 	if isWhitespace(ch) {
