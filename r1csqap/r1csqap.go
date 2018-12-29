@@ -90,7 +90,7 @@ func (pf PolynomialField) Add(a, b []*big.Int) []*big.Int {
 	return r
 }
 
-// Sub substracts two polinomials over the Finite Field
+// Sub subtracts two polinomials over the Finite Field
 func (pf PolynomialField) Sub(a, b []*big.Int) []*big.Int {
 	r := ArrayOfBigZeros(max(len(a), len(b)))
 	for i := 0; i < len(a); i++ {
@@ -194,7 +194,7 @@ func (pf PolynomialField) CombinePolynomials(r []*big.Int, ap, bp, cp [][]*big.I
 }
 
 // DivisorPolynomial returns the divisor polynomial given two polynomials
-func (pf PolynomialField) DivisorPolinomial(px, z []*big.Int) []*big.Int {
+func (pf PolynomialField) DivisorPolynomial(px, z []*big.Int) []*big.Int {
 	quo, _ := pf.Div(px, z)
 	return quo
 }

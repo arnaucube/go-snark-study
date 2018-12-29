@@ -13,7 +13,7 @@ Not finished, implementing this in my free time to understand it better, so I do
 
 Current implementation status:
 - [x] Finite Fields (1, 2, 6, 12) operations
-- [x] G1 and G2 operations
+- [x] G1 and G2 curve operations
 - [x] BN128 Pairing
 - [x] circuit code compiler
 	- [ ] code to flat code
@@ -35,15 +35,6 @@ Current implementation status:
 
 Example:
 ```go
-bn, err := bn128.NewBn128()
-assert.Nil(t, err)
-
-// new Finite Field
-fqR := fields.NewFq(bn.R)
-
-// new Polynomial Field
-pf := r1csqap.NewPolynomialField(f)
-
 // compile circuit and get the R1CS
 flatCode := `
 func test(x):
@@ -52,11 +43,23 @@ func test(x):
 	z = x + y
 	out = z + 5
 `
+
 // parse the code
 parser := circuitcompiler.NewParser(strings.NewReader(flatCode))
 circuit, err := parser.Parse()
 assert.Nil(t, err)
 fmt.Println(circuit)
+
+// witness
+b3 := big.NewInt(int64(3))
+inputs := []*big.Int{b3}
+w := circuit.CalculateWitness(inputs)
+fmt.Println("\nwitness", w)
+/*
+now we have the witness:
+w = [1 3 35 9 27 30]
+*/
+
 // flat code to R1CS
 fmt.Println("generating R1CS from flat code")
 a, b, c := circuit.GenerateR1CS()
@@ -69,41 +72,36 @@ c == [[0 0 0 1 0 0] [0 0 0 0 1 0] [0 0 0 0 0 1] [0 0 1 0 0 0]]
 */
 
 
-alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
+alphas, betas, gammas, zx := snark.Utils.PF.R1CSToQAP(a, b, c)
 
-// wittness
-b3 := big.NewInt(int64(3))
-inputs := []*big.Int{b3}
-w := circuit.CalculateWitness(inputs)
-fmt.Println("\nwitness", w)
 
-ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
+ax, bx, cx, px := snark.Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
 
-hx := pf.DivisorPolinomial(px, zx)
+hx := snark.Utils.PF.DivisorPolinomial(px, zx)
 
 // hx==px/zx so px==hx*zx
-assert.Equal(t, px, pf.Mul(hx, zx))
+assert.Equal(t, px, snark.Utils.PF.Mul(hx, zx))
 
 // p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
-abc := pf.Sub(pf.Mul(ax, bx), cx)
+abc := snark.Utils.PF.Sub(pf.Mul(ax, bx), cx)
 assert.Equal(t, abc, px)
-hz := pf.Mul(hx, zx)
+hz := snark.Utils.PF.Mul(hx, zx)
 assert.Equal(t, abc, hz)
 	
-div, rem := pf.Div(px, zx)
+div, rem := snark.Utils.PF.Div(px, zx)
 assert.Equal(t, hx, div)
 assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
 
 // calculate trusted setup
-setup, err := GenerateTrustedSetup(bn, fqR, pf, len(w), circuit, alphas, betas, gammas, zx)
+setup, err := snark.GenerateTrustedSetup(len(w), circuit, alphas, betas, gammas, zx)
 assert.Nil(t, err)
 fmt.Println("t", setup.Toxic.T)
 
 // piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-proof, err := GenerateProofs(bn, fqR, circuit, setup, hx, w)
+proof, err := snark.GenerateProofs(circuit, setup, hx, w)
 assert.Nil(t, err)
 
-assert.True(t, VerifyProof(bn, circuit, setup, proof))
+assert.True(t, snark.VerifyProof(circuit, setup, proof))
 ```
 
 ### Test

@@ -33,7 +33,7 @@ type Constraint struct {
 	Out     string
 	Literal string
 
-	Inputs []string // in func delcaration case
+	Inputs []string // in func declaration case
 }
 
 func indexInArray(arr []string, e string) int {

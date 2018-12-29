@@ -146,7 +146,7 @@ func TestR1CSToQAP(t *testing.T) {
 	fmt.Println(cx)
 	fmt.Println(px)
 
-	hx := pf.DivisorPolinomial(px, zx)
+	hx := pf.DivisorPolynomial(px, zx)
 	fmt.Println(hx)
 
 	// hx==px/zx so px==hx*zx

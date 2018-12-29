@@ -5,23 +5,14 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
-	"github.com/arnaucube/go-snark/bn128"
 	"github.com/arnaucube/go-snark/circuitcompiler"
-	"github.com/arnaucube/go-snark/fields"
 	"github.com/arnaucube/go-snark/r1csqap"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestZkFromFlatCircuitCode(t *testing.T) {
-	bn, err := bn128.NewBn128()
-	assert.Nil(t, err)
-
-	// new Finite Field
-	fqR := fields.NewFq(bn.R)
-
-	// new Polynomial Field
-	pf := r1csqap.NewPolynomialField(fqR)
 
 	// compile circuit and get the R1CS
 	flatCode := `
@@ -54,46 +45,47 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	fmt.Println("b:", b)
 	fmt.Println("c:", c)
 
-	alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
+	// R1CS to QAP
+	alphas, betas, gammas, zx := Utils.PF.R1CSToQAP(a, b, c)
+	fmt.Println("qap")
+	fmt.Println(alphas)
+	fmt.Println(betas)
+	fmt.Println(gammas)
 
-	ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
+	ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
 
-	hx := pf.DivisorPolinomial(px, zx)
+	hx := Utils.PF.DivisorPolynomial(px, zx)
 
 	// hx==px/zx so px==hx*zx
-	assert.Equal(t, px, pf.Mul(hx, zx))
+	assert.Equal(t, px, Utils.PF.Mul(hx, zx))
 
 	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
-	abc := pf.Sub(pf.Mul(ax, bx), cx)
+	abc := Utils.PF.Sub(Utils.PF.Mul(ax, bx), cx)
 	assert.Equal(t, abc, px)
-	hz := pf.Mul(hx, zx)
+	hz := Utils.PF.Mul(hx, zx)
 	assert.Equal(t, abc, hz)
 
-	div, rem := pf.Div(px, zx)
+	div, rem := Utils.PF.Div(px, zx)
 	assert.Equal(t, hx, div)
 	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
 
 	// calculate trusted setup
-	setup, err := GenerateTrustedSetup(bn, fqR, pf, len(w), *circuit, alphas, betas, gammas, zx)
+	setup, err := GenerateTrustedSetup(len(w), *circuit, alphas, betas, gammas, zx)
 	assert.Nil(t, err)
 	fmt.Println("\nt:", setup.Toxic.T)
 
 	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	proof, err := GenerateProofs(bn, fqR, *circuit, setup, hx, w)
+	proof, err := GenerateProofs(*circuit, setup, hx, w)
 	assert.Nil(t, err)
 
-	assert.True(t, VerifyProof(bn, *circuit, setup, proof))
+	fmt.Println("\n proofs:")
+	fmt.Println(proof)
+	before := time.Now()
+	assert.True(t, VerifyProof(*circuit, setup, proof))
+	fmt.Println("verify proof time elapsed:", time.Since(before))
 }
 
 func TestZkFromHardcodedR1CS(t *testing.T) {
-	bn, err := bn128.NewBn128()
-	assert.Nil(t, err)
-
-	// new Finite Field
-	fqR := fields.NewFq(bn.R)
-
-	// new Polynomial Field
-	pf := r1csqap.NewPolynomialField(fqR)
 
 	b0 := big.NewInt(int64(0))
 	b1 := big.NewInt(int64(1))
@@ -121,7 +113,7 @@ func TestZkFromHardcodedR1CS(t *testing.T) {
 		[]*big.Int{b0, b0, b0, b0, b0, b1},
 		[]*big.Int{b0, b0, b1, b0, b0, b0},
 	}
-	alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
+	alphas, betas, gammas, zx := Utils.PF.R1CSToQAP(a, b, c)
 
 	// wittness = 1, 3, 35, 9, 27, 30
 	w := []*big.Int{b1, b3, b35, b9, b27, b30}
@@ -130,31 +122,31 @@ func TestZkFromHardcodedR1CS(t *testing.T) {
 		NPublic:  0,
 		NSignals: len(w),
 	}
-	ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
+	ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
 
-	hx := pf.DivisorPolinomial(px, zx)
+	hx := Utils.PF.DivisorPolynomial(px, zx)
 
 	// hx==px/zx so px==hx*zx
-	assert.Equal(t, px, pf.Mul(hx, zx))
+	assert.Equal(t, px, Utils.PF.Mul(hx, zx))
 
 	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
-	abc := pf.Sub(pf.Mul(ax, bx), cx)
+	abc := Utils.PF.Sub(Utils.PF.Mul(ax, bx), cx)
 	assert.Equal(t, abc, px)
-	hz := pf.Mul(hx, zx)
+	hz := Utils.PF.Mul(hx, zx)
 	assert.Equal(t, abc, hz)
 
-	div, rem := pf.Div(px, zx)
+	div, rem := Utils.PF.Div(px, zx)
 	assert.Equal(t, hx, div)
 	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
 
 	// calculate trusted setup
-	setup, err := GenerateTrustedSetup(bn, fqR, pf, len(w), circuit, alphas, betas, gammas, zx)
+	setup, err := GenerateTrustedSetup(len(w), circuit, alphas, betas, gammas, zx)
 	assert.Nil(t, err)
 	fmt.Println("t", setup.Toxic.T)
 
 	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	proof, err := GenerateProofs(bn, fqR, circuit, setup, hx, w)
+	proof, err := GenerateProofs(circuit, setup, hx, w)
 	assert.Nil(t, err)
 
-	assert.True(t, VerifyProof(bn, circuit, setup, proof))
+	assert.True(t, VerifyProof(circuit, setup, proof))
 }
