@@ -144,7 +144,10 @@ func grabVar(signals []string, w []*big.Int, vStr string) *big.Int {
 }
 
 // CalculateWitness calculates the Witness of a Circuit based on the given inputs
-func (circ *Circuit) CalculateWitness(inputs []*big.Int) []*big.Int {
+func (circ *Circuit) CalculateWitness(inputs []*big.Int) ([]*big.Int, error) {
+	if len(inputs) != len(circ.Inputs) {
+		return []*big.Int{}, errors.New("given inputs != circuit.Inputs")
+	}
 	w := r1csqap.ArrayOfBigZeros(len(circ.Signals))
 	w[0] = big.NewInt(int64(1))
 	for i, input := range inputs {
@@ -162,5 +165,5 @@ func (circ *Circuit) CalculateWitness(inputs []*big.Int) []*big.Int {
 			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Div(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
 		}
 	}
-	return w
+	return w, nil
 }

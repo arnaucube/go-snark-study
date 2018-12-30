@@ -33,6 +33,7 @@ Current implementation status:
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/r1csqap?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/r1csqap) R1CS to QAP (more details: https://github.com/arnaucube/go-snark/tree/master/r1csqap)
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler) Circuit Compiler
 
+#### Library usage
 Example:
 ```go
 // compile circuit and get the R1CS
@@ -103,6 +104,56 @@ assert.Nil(t, err)
 
 assert.True(t, snark.VerifyProof(circuit, setup, proof))
 ```
+
+#### CLI usage
+
+##### Compile circuit
+Having a circuit file `test.circuit`:
+```
+func test(x):
+	aux = x*x
+	y = aux*x
+	z = x + y
+	out = z + 5
+```
+And a inputs file `inputs.json`
+```
+[
+	3
+]
+```
+
+In the command line, execute:
+```
+> go-snark compile test.circuit
+```
+
+This will output the `compiledcircuit.json` file.
+
+##### Trusted Setup
+Having the `compiledcircuit.json`, now we can generate the `TrustedSetup`:
+```
+> go-snark trustedsetup compiledcircuit.json
+```
+This will create the file `trustedsetup.json` with the TrustedSetup data, and also a `toxic.json` file, with the parameters to delete from the `Trusted Setup`.
+
+
+##### Generate Proofs
+Assumming that we have the `compiledcircuit.json` and the `trustedsetup.json`, we can now generate the `Proofs` with the following command:
+```
+> go-snark genproofs
+```
+
+This will store the file `proofs.json`, that contains all the SNARK proofs.
+
+##### Verify Proofs
+Having the `proofs.json`, `compiledcircuit.json`, `trustedsetup.json` files, we can now verify the `Pairings` of the proofs, in order to verify the proofs.
+```
+> go-snark verify
+```
+This will return a `true` if the proofs are verified, or a `false` if the proofs are not verified.
+
+
 
 ### Test
 ```

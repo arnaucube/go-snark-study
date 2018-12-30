@@ -143,10 +143,13 @@ func BigIsOdd(n *big.Int) bool {
 }
 
 func (fq12 Fq12) Exp(base [2][3][2]*big.Int, e *big.Int) [2][3][2]*big.Int {
+	// TODO fix bottleneck
+
 	res := fq12.One()
 	rem := fq12.Fq2.F.Copy(e)
 	exp := base
 
+	// before := time.Now()
 	for !bytes.Equal(rem.Bytes(), big.NewInt(int64(0)).Bytes()) {
 		if BigIsOdd(rem) {
 			res = fq12.Mul(res, exp)
@@ -154,6 +157,7 @@ func (fq12 Fq12) Exp(base [2][3][2]*big.Int, e *big.Int) [2][3][2]*big.Int {
 		exp = fq12.Square(exp)
 		rem = new(big.Int).Rsh(rem, 1)
 	}
+	// fmt.Println("time elapsed:", time.Since(before))
 	return res
 }
 func (fq12 Fq12) Affine(a [2][3][2]*big.Int) [2][3][2]*big.Int {

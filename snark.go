@@ -237,14 +237,16 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, hx []*big.Int,
 }
 
 // VerifyProof verifies over the BN128 the Pairings of the Proof
-func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof) bool {
+func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, printVer bool) bool {
 	// e(piA, Va) == e(piA', g2)
 	pairingPiaVa := Utils.Bn.Pairing(proof.PiA, setup.Vk.Vka)
 	pairingPiapG2 := Utils.Bn.Pairing(proof.PiAp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingPiaVa, pairingPiapG2) {
 		return false
 	}
-	fmt.Println("✓ e(piA, Va) == e(piA', g2), valid knowledge commitment for A")
+	if printVer {
+		fmt.Println("✓ e(piA, Va) == e(piA', g2), valid knowledge commitment for A")
+	}
 
 	// e(Vb, piB) == e(piB', g2)
 	pairingVbPib := Utils.Bn.Pairing(setup.Vk.Vkb, proof.PiB)
@@ -252,7 +254,9 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof) bool
 	if !Utils.Bn.Fq12.Equal(pairingVbPib, pairingPibpG2) {
 		return false
 	}
-	fmt.Println("✓ e(Vb, piB) == e(piB', g2), valid knowledge commitment for B")
+	if printVer {
+		fmt.Println("✓ e(Vb, piB) == e(piB', g2), valid knowledge commitment for B")
+	}
 
 	// e(piC, Vc) == e(piC', g2)
 	pairingPicVc := Utils.Bn.Pairing(proof.PiC, setup.Vk.Vkc)
@@ -260,7 +264,9 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof) bool
 	if !Utils.Bn.Fq12.Equal(pairingPicVc, pairingPicpG2) {
 		return false
 	}
-	fmt.Println("✓ e(piC, Vc) == e(piC', g2), valid knowledge commitment for C")
+	if printVer {
+		fmt.Println("✓ e(piC, Vc) == e(piC', g2), valid knowledge commitment for C")
+	}
 
 	// Vkx, to then calculate Vkx+piA
 	vkxpia := setup.Vk.A[0]
@@ -276,7 +282,9 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof) bool
 			Utils.Bn.Pairing(proof.PiC, Utils.Bn.G2.G))) {
 		return false
 	}
-	fmt.Println("✓ e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2), QAP disibility checked")
+	if printVer {
+		fmt.Println("✓ e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2), QAP disibility checked")
+	}
 
 	// e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB)
 	// == e(piK, g2Kgamma)
@@ -288,7 +296,9 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof) bool
 	if !Utils.Bn.Fq12.Equal(pairingL, pairingR) {
 		return false
 	}
-	fmt.Println("✓ e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB) == e(piK, g2Kgamma)")
+	if printVer {
+		fmt.Println("✓ e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB) == e(piK, g2Kgamma)")
+	}
 
 	return true
 }

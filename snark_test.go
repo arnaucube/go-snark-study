@@ -34,7 +34,8 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	b3 := big.NewInt(int64(3))
 	inputs := []*big.Int{b3}
 	// wittness
-	w := circuit.CalculateWitness(inputs)
+	w, err := circuit.CalculateWitness(inputs)
+	assert.Nil(t, err)
 	fmt.Println("\nwitness", w)
 
 	// flat code to R1CS
@@ -81,7 +82,7 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	fmt.Println("\n proofs:")
 	fmt.Println(proof)
 	before := time.Now()
-	assert.True(t, VerifyProof(*circuit, setup, proof))
+	assert.True(t, VerifyProof(*circuit, setup, proof, false))
 	fmt.Println("verify proof time elapsed:", time.Since(before))
 }
 
@@ -142,11 +143,64 @@ func TestZkFromHardcodedR1CS(t *testing.T) {
 	// calculate trusted setup
 	setup, err := GenerateTrustedSetup(len(w), circuit, alphas, betas, gammas, zx)
 	assert.Nil(t, err)
-	fmt.Println("t", setup.Toxic.T)
 
 	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
 	proof, err := GenerateProofs(circuit, setup, hx, w)
 	assert.Nil(t, err)
 
-	assert.True(t, VerifyProof(circuit, setup, proof))
+	assert.True(t, VerifyProof(circuit, setup, proof, true))
+}
+
+func TestZkMultiplication(t *testing.T) {
+
+	// compile circuit and get the R1CS
+	flatCode := `
+	func test(a, b):
+		out = a * b
+	`
+
+	// parse the code
+	parser := circuitcompiler.NewParser(strings.NewReader(flatCode))
+	circuit, err := parser.Parse()
+	assert.Nil(t, err)
+
+	b3 := big.NewInt(int64(3))
+	b4 := big.NewInt(int64(4))
+	inputs := []*big.Int{b3, b4}
+	// wittness
+	w, err := circuit.CalculateWitness(inputs)
+	assert.Nil(t, err)
+
+	// flat code to R1CS
+	a, b, c := circuit.GenerateR1CS()
+
+	// R1CS to QAP
+	alphas, betas, gammas, zx := Utils.PF.R1CSToQAP(a, b, c)
+
+	ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
+
+	hx := Utils.PF.DivisorPolynomial(px, zx)
+
+	// hx==px/zx so px==hx*zx
+	assert.Equal(t, px, Utils.PF.Mul(hx, zx))
+
+	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
+	abc := Utils.PF.Sub(Utils.PF.Mul(ax, bx), cx)
+	assert.Equal(t, abc, px)
+	hz := Utils.PF.Mul(hx, zx)
+	assert.Equal(t, abc, hz)
+
+	div, rem := Utils.PF.Div(px, zx)
+	assert.Equal(t, hx, div)
+	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(1))
+
+	// calculate trusted setup
+	setup, err := GenerateTrustedSetup(len(w), *circuit, alphas, betas, gammas, zx)
+	assert.Nil(t, err)
+
+	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
+	proof, err := GenerateProofs(*circuit, setup, hx, w)
+	assert.Nil(t, err)
+
+	assert.True(t, VerifyProof(*circuit, setup, proof, false))
 }

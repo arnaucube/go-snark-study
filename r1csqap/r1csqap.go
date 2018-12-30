@@ -1,6 +1,7 @@
 package r1csqap
 
 import (
+	"bytes"
 	"math/big"
 
 	"github.com/arnaucube/go-snark/fields"
@@ -27,6 +28,17 @@ func ArrayOfBigZeros(num int) []*big.Int {
 		r = append(r, bigZero)
 	}
 	return r
+}
+func BigArraysEqual(a, b []*big.Int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := 0; i < len(a); i++ {
+		if !bytes.Equal(a[i].Bytes(), b[i].Bytes()) {
+			return false
+		}
+	}
+	return true
 }
 
 // PolynomialField is the Polynomial over a Finite Field where the polynomial operations are performed
