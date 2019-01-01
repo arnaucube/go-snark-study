@@ -10,14 +10,15 @@ import (
 
 // Circuit is the data structure of the compiled circuit
 type Circuit struct {
-	NVars       int
-	NPublic     int
-	NSignals    int
-	Inputs      []string
-	Signals     []string
-	Witness     []*big.Int
-	Constraints []Constraint
-	R1CS        struct {
+	NVars         int
+	NPublic       int
+	NSignals      int
+	Inputs        []string
+	Signals       []string
+	PublicSignals []string
+	Witness       []*big.Int
+	Constraints   []Constraint
+	R1CS          struct {
 		A [][]*big.Int
 		B [][]*big.Int
 		C [][]*big.Int
@@ -151,7 +152,7 @@ func (circ *Circuit) CalculateWitness(inputs []*big.Int) ([]*big.Int, error) {
 	w := r1csqap.ArrayOfBigZeros(len(circ.Signals))
 	w[0] = big.NewInt(int64(1))
 	for i, input := range inputs {
-		w[i+1] = input
+		w[i+2] = input
 	}
 	for _, constraint := range circ.Constraints {
 		if constraint.Op == "in" {

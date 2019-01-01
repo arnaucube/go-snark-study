@@ -81,13 +81,13 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 
 	fmt.Println("\n proofs:")
 	fmt.Println(proof)
+	fmt.Println("public signals:", proof.PublicSignals)
 	before := time.Now()
-	assert.True(t, VerifyProof(*circuit, setup, proof, false))
+	assert.True(t, VerifyProof(*circuit, setup, proof, true))
 	fmt.Println("verify proof time elapsed:", time.Since(before))
 }
 
 func TestZkFromHardcodedR1CS(t *testing.T) {
-
 	b0 := big.NewInt(int64(0))
 	b1 := big.NewInt(int64(1))
 	b3 := big.NewInt(int64(3))
@@ -97,14 +97,14 @@ func TestZkFromHardcodedR1CS(t *testing.T) {
 	b30 := big.NewInt(int64(30))
 	b35 := big.NewInt(int64(35))
 	a := [][]*big.Int{
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
+		[]*big.Int{b0, b0, b1, b0, b0, b0},
 		[]*big.Int{b0, b0, b0, b1, b0, b0},
-		[]*big.Int{b0, b1, b0, b0, b1, b0},
+		[]*big.Int{b0, b0, b1, b0, b1, b0},
 		[]*big.Int{b5, b0, b0, b0, b0, b1},
 	}
 	b := [][]*big.Int{
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
+		[]*big.Int{b0, b0, b1, b0, b0, b0},
+		[]*big.Int{b0, b0, b1, b0, b0, b0},
 		[]*big.Int{b1, b0, b0, b0, b0, b0},
 		[]*big.Int{b1, b0, b0, b0, b0, b0},
 	}
@@ -112,15 +112,15 @@ func TestZkFromHardcodedR1CS(t *testing.T) {
 		[]*big.Int{b0, b0, b0, b1, b0, b0},
 		[]*big.Int{b0, b0, b0, b0, b1, b0},
 		[]*big.Int{b0, b0, b0, b0, b0, b1},
-		[]*big.Int{b0, b0, b1, b0, b0, b0},
+		[]*big.Int{b0, b1, b0, b0, b0, b0},
 	}
 	alphas, betas, gammas, zx := Utils.PF.R1CSToQAP(a, b, c)
 
-	// wittness = 1, 3, 35, 9, 27, 30
-	w := []*big.Int{b1, b3, b35, b9, b27, b30}
+	// wittness = 1, 35, 3, 9, 27, 30
+	w := []*big.Int{b1, b35, b3, b9, b27, b30}
 	circuit := circuitcompiler.Circuit{
 		NVars:    6,
-		NPublic:  0,
+		NPublic:  1,
 		NSignals: len(w),
 	}
 	ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)

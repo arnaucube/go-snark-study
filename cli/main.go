@@ -62,8 +62,10 @@ func main() {
 func CompileCircuit(context *cli.Context) error {
 	fmt.Println("cli")
 
+	circuitPath := context.Args().Get(0)
+
 	// read circuit file
-	circuitFile, err := os.Open("test.circuit")
+	circuitFile, err := os.Open(circuitPath)
 	panicErr(err)
 
 	// parse circuit code
@@ -150,8 +152,16 @@ func CompileCircuit(context *cli.Context) error {
 	jsonFile.Write(jsonData)
 	jsonFile.Close()
 	fmt.Println("Compiled Circuit data written to ", jsonFile.Name())
+
+	// remove setup.Toxic
+	var tsetup snark.Setup
+	tsetup.Pk = setup.Pk
+	tsetup.Vk = setup.Vk
+	tsetup.G1T = setup.G1T
+	tsetup.G2T = setup.G2T
+
 	// store setup to json
-	jsonData, err = json.Marshal(setup)
+	jsonData, err = json.Marshal(tsetup)
 	panicErr(err)
 	// store setup into file
 	jsonFile, err = os.Create("trustedsetup.json")
@@ -202,6 +212,7 @@ func GenerateProofs(context *cli.Context) error {
 
 	fmt.Println("\n proofs:")
 	fmt.Println(proof)
+	fmt.Println("public signals:", proof.PublicSignals)
 
 	// store proofs to json
 	jsonData, err := json.Marshal(proof)

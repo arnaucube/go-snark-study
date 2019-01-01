@@ -231,7 +231,7 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, hx []*big.Int,
 	for i := 0; i < len(hx); i++ {
 		proof.PiH = Utils.Bn.G1.Add(proof.PiH, Utils.Bn.G1.MulScalar(setup.G1T[i], hx[i]))
 	}
-	proof.PublicSignals = w[1 : circuit.NPublic+1]
+	proof.PublicSignals = w[1:2] // out signal
 
 	return proof, nil
 }
@@ -270,7 +270,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, prin
 
 	// Vkx, to then calculate Vkx+piA
 	vkxpia := setup.Vk.A[0]
-	for i := 0; i < circuit.NPublic; i++ {
+	for i := 0; i < len(proof.PublicSignals); i++ {
 		vkxpia = Utils.Bn.G1.Add(vkxpia, Utils.Bn.G1.MulScalar(setup.Vk.A[i+1], proof.PublicSignals[i]))
 	}
 

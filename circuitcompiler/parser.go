@@ -147,14 +147,16 @@ func (p *Parser) Parse() (*Circuit, error) {
 			circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.V2)
 		}
 		if constraint.Out == "out" {
-			// if Out is "out", put it after the inputs
+			// if Out is "out", put it after first value (one) and before the inputs
 			if !existInArray(circuit.Signals, constraint.Out) {
 				signalsCopy := copyArray(circuit.Signals)
 				var auxSignals []string
-				auxSignals = append(auxSignals, signalsCopy[0:nInputs+1]...)
+				auxSignals = append(auxSignals, signalsCopy[0])
 				auxSignals = append(auxSignals, constraint.Out)
-				auxSignals = append(auxSignals, signalsCopy[nInputs+1:]...)
+				auxSignals = append(auxSignals, signalsCopy[1:]...)
 				circuit.Signals = auxSignals
+				circuit.PublicSignals = append(circuit.PublicSignals, constraint.Out)
+				circuit.NPublic++
 			}
 		} else {
 			circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.Out)
@@ -162,7 +164,6 @@ func (p *Parser) Parse() (*Circuit, error) {
 	}
 	circuit.NVars = len(circuit.Signals)
 	circuit.NSignals = len(circuit.Signals)
-	circuit.NPublic = 0
 	return circuit, nil
 }
 func copyArray(in []string) []string { // tmp

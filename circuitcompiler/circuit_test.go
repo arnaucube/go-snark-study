@@ -50,14 +50,14 @@ func TestCircuitParser(t *testing.T) {
 	b1 := big.NewInt(int64(1))
 	b5 := big.NewInt(int64(5))
 	aExpected := [][]*big.Int{
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
+		[]*big.Int{b0, b0, b1, b0, b0, b0},
 		[]*big.Int{b0, b0, b0, b1, b0, b0},
-		[]*big.Int{b0, b1, b0, b0, b1, b0},
+		[]*big.Int{b0, b0, b1, b0, b1, b0},
 		[]*big.Int{b5, b0, b0, b0, b0, b1},
 	}
 	bExpected := [][]*big.Int{
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
+		[]*big.Int{b0, b0, b1, b0, b0, b0},
+		[]*big.Int{b0, b0, b1, b0, b0, b0},
 		[]*big.Int{b1, b0, b0, b0, b0, b0},
 		[]*big.Int{b1, b0, b0, b0, b0, b0},
 	}
@@ -65,7 +65,7 @@ func TestCircuitParser(t *testing.T) {
 		[]*big.Int{b0, b0, b0, b1, b0, b0},
 		[]*big.Int{b0, b0, b0, b0, b1, b0},
 		[]*big.Int{b0, b0, b0, b0, b0, b1},
-		[]*big.Int{b0, b0, b1, b0, b0, b0},
+		[]*big.Int{b0, b1, b0, b0, b0, b0},
 	}
 
 	assert.Equal(t, aExpected, a)
