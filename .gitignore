@@ -4,3 +4,4 @@ cli/inputs.json
 cli/proofs.json
 cli/test.circuit
 cli/trustedsetup.json
+tmp

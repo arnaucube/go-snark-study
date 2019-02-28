@@ -16,7 +16,7 @@ Current implementation status:
 - [x] G1 and G2 curve operations
 - [x] BN128 Pairing
 - [x] circuit code compiler
-	- [ ] code to flat code
+	- [ ] code to flat code (improve circuit compiler)
 	- [x] flat code compiler
 - [x] circuit to R1CS
 - [x] polynomial operations
@@ -24,6 +24,8 @@ Current implementation status:
 - [x] generate trusted setup
 - [x] generate proofs
 - [x] verify proofs with BN128 pairing
+	- [ ] fix 4th pairing proofs generation & verification
+- [ ] WASM implementation to run on browsers
 
 
 ## Usage

@@ -131,6 +131,9 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 		c = append(c, cConstraint)
 
 	}
+	circ.R1CS.A = a
+	circ.R1CS.B = b
+	circ.R1CS.C = c
 	return a, b, c
 }
 
@@ -142,6 +145,11 @@ func grabVar(signals []string, w []*big.Int, vStr string) *big.Int {
 	} else {
 		return w[indexInArray(signals, vStr)]
 	}
+}
+
+type Inputs struct {
+	Private []*big.Int
+	Publics []*big.Int
 }
 
 // CalculateWitness calculates the Witness of a Circuit based on the given inputs

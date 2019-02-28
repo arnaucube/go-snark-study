@@ -31,6 +31,12 @@ var commands = []cli.Command{
 		Action:  CompileCircuit,
 	},
 	{
+		Name:    "trustedsetup",
+		Aliases: []string{},
+		Usage:   "generate trusted setup for a circuit",
+		Action:  TrustedSetup,
+	},
+	{
 		Name:    "genproofs",
 		Aliases: []string{},
 		Usage:   "generate the snark proofs",
@@ -79,12 +85,13 @@ func CompileCircuit(context *cli.Context) error {
 	panicErr(err)
 
 	// parse inputs from inputsFile
-	var inputs []*big.Int
+	// var inputs []*big.Int
+	var inputs circuitcompiler.Inputs
 	json.Unmarshal([]byte(string(inputsFile)), &inputs)
 	panicErr(err)
 
 	// calculate wittness
-	w, err := circuit.CalculateWitness(inputs)
+	w, err := circuit.CalculateWitness(inputs.Private)
 	panicErr(err)
 	fmt.Println("\nwitness", w)
 
@@ -137,11 +144,6 @@ func CompileCircuit(context *cli.Context) error {
 		}
 	}
 
-	// calculate trusted setup
-	setup, err := snark.GenerateTrustedSetup(len(w), *circuit, alphas, betas, gammas, zx)
-	panicErr(err)
-	fmt.Println("\nt:", setup.Toxic.T)
-
 	// store circuit to json
 	jsonData, err := json.Marshal(circuit)
 	panicErr(err)
@@ -153,6 +155,41 @@ func CompileCircuit(context *cli.Context) error {
 	jsonFile.Close()
 	fmt.Println("Compiled Circuit data written to ", jsonFile.Name())
 
+	return nil
+}
+
+func TrustedSetup(context *cli.Context) error {
+	// open compiledcircuit.json
+	compiledcircuitFile, err := ioutil.ReadFile("compiledcircuit.json")
+	panicErr(err)
+	var circuit circuitcompiler.Circuit
+	json.Unmarshal([]byte(string(compiledcircuitFile)), &circuit)
+	panicErr(err)
+
+	// read inputs file
+	inputsFile, err := ioutil.ReadFile("inputs.json")
+	panicErr(err)
+	// parse inputs from inputsFile
+	// var inputs []*big.Int
+	var inputs circuitcompiler.Inputs
+	json.Unmarshal([]byte(string(inputsFile)), &inputs)
+	panicErr(err)
+	// calculate wittness
+	w, err := circuit.CalculateWitness(inputs.Private)
+	panicErr(err)
+
+	// R1CS to QAP
+	alphas, betas, gammas, zx := snark.Utils.PF.R1CSToQAP(circuit.R1CS.A, circuit.R1CS.B, circuit.R1CS.C)
+	fmt.Println("qap")
+	fmt.Println(alphas)
+	fmt.Println(betas)
+	fmt.Println(gammas)
+
+	// calculate trusted setup
+	setup, err := snark.GenerateTrustedSetup(len(w), circuit, alphas, betas, gammas, zx)
+	panicErr(err)
+	fmt.Println("\nt:", setup.Toxic.T)
+
 	// remove setup.Toxic
 	var tsetup snark.Setup
 	tsetup.Pk = setup.Pk
@@ -161,10 +198,10 @@ func CompileCircuit(context *cli.Context) error {
 	tsetup.G2T = setup.G2T
 
 	// store setup to json
-	jsonData, err = json.Marshal(tsetup)
+	jsonData, err := json.Marshal(tsetup)
 	panicErr(err)
 	// store setup into file
-	jsonFile, err = os.Create("trustedsetup.json")
+	jsonFile, err := os.Create("trustedsetup.json")
 	panicErr(err)
 	defer jsonFile.Close()
 	jsonFile.Write(jsonData)
@@ -192,27 +229,34 @@ func GenerateProofs(context *cli.Context) error {
 	inputsFile, err := ioutil.ReadFile("inputs.json")
 	panicErr(err)
 	// parse inputs from inputsFile
-	var inputs []*big.Int
+	// var inputs []*big.Int
+	var inputs circuitcompiler.Inputs
 	json.Unmarshal([]byte(string(inputsFile)), &inputs)
 	panicErr(err)
 	// calculate wittness
-	w, err := circuit.CalculateWitness(inputs)
+	w, err := circuit.CalculateWitness(inputs.Private)
 	panicErr(err)
 	fmt.Println("\nwitness", w)
 
 	// flat code to R1CS
-	a, b, c := circuit.GenerateR1CS()
+	// a, b, c := circuit.GenerateR1CS()
+	a := circuit.R1CS.A
+	b := circuit.R1CS.B
+	c := circuit.R1CS.C
 	// R1CS to QAP
 	alphas, betas, gammas, zx := snark.Utils.PF.R1CSToQAP(a, b, c)
 	_, _, _, px := snark.Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
 	hx := snark.Utils.PF.DivisorPolynomial(px, zx)
 
+	fmt.Println(circuit)
+	fmt.Println(trustedsetup.G1T)
+	fmt.Println(hx)
+	fmt.Println(w)
 	proof, err := snark.GenerateProofs(circuit, trustedsetup, hx, w)
 	panicErr(err)
 
 	fmt.Println("\n proofs:")
 	fmt.Println(proof)
-	fmt.Println("public signals:", proof.PublicSignals)
 
 	// store proofs to json
 	jsonData, err := json.Marshal(proof)
@@ -249,7 +293,8 @@ func VerifyProofs(context *cli.Context) error {
 	json.Unmarshal([]byte(string(trustedsetupFile)), &trustedsetup)
 	panicErr(err)
 
-	verified := snark.VerifyProof(circuit, trustedsetup, proof, true)
+	// TODO read publicSignals from file
+	verified := snark.VerifyProof(circuit, trustedsetup, proof, publicSignals, true)
 	if !verified {
 		fmt.Println("ERROR: proofs not verified")
 	} else {
