@@ -153,6 +153,7 @@ type Inputs struct {
 }
 
 // CalculateWitness calculates the Witness of a Circuit based on the given inputs
+// witness = [ one, output, publicInputs, privateInputs, ...]
 func (circ *Circuit) CalculateWitness(inputs []*big.Int) ([]*big.Int, error) {
 	if len(inputs) != len(circ.Inputs) {
 		return []*big.Int{}, errors.New("given inputs != circuit.Inputs")

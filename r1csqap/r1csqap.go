@@ -175,10 +175,14 @@ func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*bi
 		gammas = append(gammas, pf.LagrangeInterpolation(cT[i]))
 	}
 	z := []*big.Int{big.NewInt(int64(1))}
-	for i := 1; i < len(aT[0])+1; i++ {
-		ineg := big.NewInt(int64(-i))
-		b1 := big.NewInt(int64(1))
-		z = pf.Mul(z, []*big.Int{ineg, b1})
+	for i := 1; i < len(alphas)-1; i++ {
+		z = pf.Mul(
+			z,
+			[]*big.Int{
+				pf.F.Neg(
+					big.NewInt(int64(i))),
+				big.NewInt(int64(1)),
+			})
 	}
 	return alphas, betas, gammas, z
 }

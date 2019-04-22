@@ -24,7 +24,7 @@ Current implementation status:
 - [x] generate trusted setup
 - [x] generate proofs
 - [x] verify proofs with BN128 pairing
-	- [ ] fix 4th pairing proofs generation & verification
+	- [ ] fix 4th pairing proofs generation & verification: ê(Vkx+piA, piB) == ê(piH, Vkz) * ê(piC, g2)
 - [ ] WASM implementation to run on browsers
 
 
@@ -36,6 +36,8 @@ Current implementation status:
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler) Circuit Compiler
 
 ### Library usage
+Warning: not finished.
+
 Example:
 ```go
 // compile circuit and get the R1CS

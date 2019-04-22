@@ -2,7 +2,6 @@ package r1csqap
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -31,9 +30,14 @@ func TestTranspose(t *testing.T) {
 	})
 }
 
+func neg(a *big.Int) *big.Int {
+	return new(big.Int).Neg(a)
+}
+
 func TestPol(t *testing.T) {
 	b0 := big.NewInt(int64(0))
 	b1 := big.NewInt(int64(1))
+	b2 := big.NewInt(int64(2))
 	b3 := big.NewInt(int64(3))
 	b4 := big.NewInt(int64(4))
 	b5 := big.NewInt(int64(5))
@@ -55,6 +59,17 @@ func TestPol(t *testing.T) {
 	o := pf.Mul(a, b)
 	assert.Equal(t, o, []*big.Int{b3, b0, b16, b0, b5})
 
+	// polynomial division
+	quo, rem := pf.Div(a, b)
+	assert.Equal(t, quo[0].Int64(), int64(5))
+	assert.Equal(t, new(big.Int).Sub(rem[0], r).Int64(), int64(-14)) // check the rem result without modulo
+
+	c := []*big.Int{neg(b4), b0, neg(b2), b1}
+	d := []*big.Int{neg(b3), b1}
+	quo2, rem2 := pf.Div(c, d)
+	assert.Equal(t, quo2, []*big.Int{b3, b1, b1})
+	assert.Equal(t, rem2[0].Int64(), int64(5))
+
 	// polynomial addition
 	o = pf.Add(a, b)
 	assert.Equal(t, o, []*big.Int{b4, b0, b6})
@@ -67,8 +82,8 @@ func TestPol(t *testing.T) {
 	assert.True(t, bytes.Equal(b0.Bytes(), o[1].Bytes()))
 	assert.True(t, bytes.Equal(b0.Bytes(), o[2].Bytes()))
 
-	c := []*big.Int{b5, b6, b1}
-	d := []*big.Int{b1, b3}
+	c = []*big.Int{b5, b6, b1}
+	d = []*big.Int{b1, b3}
 	o = pf.Sub(c, d)
 	assert.Equal(t, o, []*big.Int{b4, b3, b1})
 
@@ -133,21 +148,21 @@ func TestR1CSToQAP(t *testing.T) {
 		[]*big.Int{b0, b0, b1, b0, b0, b0},
 	}
 	alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
-	fmt.Println(alphas)
-	fmt.Println(betas)
-	fmt.Println(gammas)
-	fmt.Print("Z(x): ")
-	fmt.Println(zx)
+	// fmt.Println(alphas)
+	// fmt.Println(betas)
+	// fmt.Println(gammas)
+	// fmt.Print("Z(x): ")
+	// fmt.Println(zx)
 
 	w := []*big.Int{b1, b3, b35, b9, b27, b30}
 	ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
-	fmt.Println(ax)
-	fmt.Println(bx)
-	fmt.Println(cx)
-	fmt.Println(px)
+	// fmt.Println(ax)
+	// fmt.Println(bx)
+	// fmt.Println(cx)
+	// fmt.Println(px)
 
 	hx := pf.DivisorPolynomial(px, zx)
-	fmt.Println(hx)
+	// fmt.Println(hx)
 
 	// hx==px/zx so px==hx*zx
 	assert.Equal(t, px, pf.Mul(hx, zx))

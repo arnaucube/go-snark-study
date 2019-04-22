@@ -27,7 +27,7 @@ type Setup struct {
 	}
 
 	// public
-	G1T [][3]*big.Int    // t encrypted in G1 curve
+	G1T [][3]*big.Int    // t encrypted in G1 curve, G1T == Pk.H
 	G2T [][3][2]*big.Int // t encrypted in G2 curve
 	Pk  struct {         // Proving Key pk:=(pkA, pkB, pkC, pkH)
 		A  [][3]*big.Int
@@ -37,6 +37,7 @@ type Setup struct {
 		Ap [][3]*big.Int
 		Bp [][3]*big.Int
 		Cp [][3]*big.Int
+		Z  []*big.Int
 	}
 	Vk struct {
 		Vka   [3][2]*big.Int
@@ -90,7 +91,7 @@ func prepareUtils() utils {
 }
 
 // GenerateTrustedSetup generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
-func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, alphas, betas, gammas [][]*big.Int, zx []*big.Int) (Setup, error) {
+func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, alphas, betas, gammas [][]*big.Int) (Setup, error) {
 	var setup Setup
 	var err error
 
@@ -146,15 +147,7 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	}
 	setup.Toxic.RhoC = Utils.FqR.Mul(setup.Toxic.RhoA, setup.Toxic.RhoB)
 
-	// encrypt t values with curve generators
-	var gt1 [][3]*big.Int
-	var gt2 [][3][2]*big.Int
-	gt1 = append(gt1, Utils.Bn.G1.G)
-	tEncr := setup.Toxic.T
-	for i := 1; i < witnessLength; i++ {
-		gt1 = append(gt1, Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, tEncr))
-		tEncr = Utils.Bn.Fq1.Mul(tEncr, setup.Toxic.T)
-	}
+	// calculated more down
 	// for i := 0; i < witnessLength; i++ {
 	//         tPow := Utils.FqR.Exp(setup.Toxic.T, big.NewInt(int64(i)))
 	//         tEncr1 := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, tPow)
@@ -164,8 +157,6 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	// }
 	// gt1: g1, g1*t, g1*t^2, g1*t^3, ...
 	// gt2: g2, g2*t, g2*t^2, ...
-	setup.G1T = gt1
-	setup.G2T = gt2
 
 	setup.Vk.Vka = Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, setup.Toxic.Ka)
 	setup.Vk.Vkb = Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, setup.Toxic.Kb)
@@ -182,7 +173,8 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	setup.Vk.G2Kbg = Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, kbg)
 	setup.Vk.G2Kg = Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, setup.Toxic.Kgamma)
 
-	for i := 0; i < circuit.NVars; i++ {
+	// for i := 0; i < circuit.NVars; i++ {
+	for i := 0; i < len(circuit.Signals); i++ {
 		at := Utils.PF.Eval(alphas[i], setup.Toxic.T)
 		rhoAat := Utils.Bn.Fq1.Mul(setup.Toxic.RhoA, at)
 		a := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, rhoAat)
@@ -217,15 +209,41 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 		k_ := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, kt)
 		setup.Pk.Kp = append(setup.Pk.Kp, Utils.Bn.G1.MulScalar(k_, setup.Toxic.Kbeta))
 	}
-	zt := Utils.PF.Eval(zx, setup.Toxic.T)
+
+	// z pol
+	zpol := []*big.Int{big.NewInt(int64(1))}
+	// for i := 1; i < len(circuit.Constraints); i++ {
+	for i := 1; i <= circuit.NPublic; i++ { // circuit.NPublic == d
+		zpol = Utils.PF.Mul(
+			zpol,
+			[]*big.Int{
+				Utils.FqR.Neg( // neg over R
+					big.NewInt(int64(i))),
+				big.NewInt(int64(1)),
+			})
+	}
+	setup.Pk.Z = zpol
+
+	zt := Utils.PF.Eval(zpol, setup.Toxic.T)
 	rhoCzt := Utils.Bn.Fq1.Mul(setup.Toxic.RhoC, zt)
 	setup.Vk.Vkz = Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, rhoCzt)
+
+	// encrypt t values with curve generators
+	var gt1 [][3]*big.Int
+	gt1 = append(gt1, Utils.Bn.G1.G) // the first is t**0 * G1 = 1 * G1 = G1
+	tEncr := setup.Toxic.T
+	for i := 1; i < len(zpol); i++ { //should be G1T = pkH = (tau**i * G1) from i=0 to d, where d is degree of pol Z(x)
+		gt1 = append(gt1, Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, tEncr))
+		tEncr = Utils.Bn.Fq1.Mul(tEncr, setup.Toxic.T)
+	}
+	fmt.Println("len(G1T)", len(gt1))
+	setup.G1T = gt1
 
 	return setup, nil
 }
 
 // GenerateProofs generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
-func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, hx []*big.Int, w []*big.Int) (Proof, error) {
+func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, px []*big.Int) (Proof, error) {
 	var proof Proof
 	proof.PiA = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 	proof.PiAp = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
@@ -251,7 +269,11 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, hx []*big.Int,
 		proof.PiKp = Utils.Bn.G1.Add(proof.PiKp, Utils.Bn.G1.MulScalar(setup.Pk.Kp[i], w[i]))
 	}
 
-	for i := 0; i < len(hx); i++ {
+	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z) // maybe move this calculation to a previous step
+
+	// piH = pkH,0 + sum (  hi * pk H,i ), where pkH = G1T, hi=hx
+	proof.PiH = Utils.Bn.G1.Add(proof.PiH, setup.G1T[0])
+	for i := 1; i < len(setup.Pk.Z); i++ {
 		proof.PiH = Utils.Bn.G1.Add(proof.PiH, Utils.Bn.G1.MulScalar(setup.G1T[i], hx[i]))
 	}
 
@@ -259,14 +281,14 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, hx []*big.Int,
 }
 
 // VerifyProof verifies over the BN128 the Pairings of the Proof
-func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publicSignals []*big.Int, printVer bool) bool {
+func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
 	// e(piA, Va) == e(piA', g2)
 	pairingPiaVa := Utils.Bn.Pairing(proof.PiA, setup.Vk.Vka)
 	pairingPiapG2 := Utils.Bn.Pairing(proof.PiAp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingPiaVa, pairingPiapG2) {
 		return false
 	}
-	if printVer {
+	if debug {
 		fmt.Println("✓ e(piA, Va) == e(piA', g2), valid knowledge commitment for A")
 	}
 
@@ -276,7 +298,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	if !Utils.Bn.Fq12.Equal(pairingVbPib, pairingPibpG2) {
 		return false
 	}
-	if printVer {
+	if debug {
 		fmt.Println("✓ e(Vb, piB) == e(piB', g2), valid knowledge commitment for B")
 	}
 
@@ -286,13 +308,14 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	if !Utils.Bn.Fq12.Equal(pairingPicVc, pairingPicpG2) {
 		return false
 	}
-	if printVer {
+	if debug {
 		fmt.Println("✓ e(piC, Vc) == e(piC', g2), valid knowledge commitment for C")
 	}
 
 	// Vkx, to then calculate Vkx+piA
 	vkxpia := setup.Vk.IC[0]
 	for i := 0; i < len(publicSignals); i++ {
+		fmt.Println("pub sig", publicSignals[i])
 		vkxpia = Utils.Bn.G1.Add(vkxpia, Utils.Bn.G1.MulScalar(setup.Vk.IC[i+1], publicSignals[i]))
 	}
 
@@ -304,7 +327,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 			Utils.Bn.Pairing(proof.PiC, Utils.Bn.G2.G))) {
 		return false
 	}
-	if printVer {
+	if debug {
 		fmt.Println("✓ e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2), QAP disibility checked")
 	}
 
@@ -318,7 +341,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	if !Utils.Bn.Fq12.Equal(pairingL, pairingR) {
 		return false
 	}
-	if printVer {
+	if debug {
 		fmt.Println("✓ e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB) == e(piK, g2Kgamma)")
 	}
 

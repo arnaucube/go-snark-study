@@ -5,3 +5,4 @@ cli/proofs.json
 cli/test.circuit
 cli/trustedsetup.json
 tmp
+tmpBackup
