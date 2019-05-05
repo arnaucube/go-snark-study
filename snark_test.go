@@ -50,10 +50,11 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	fmt.Println("c:", c)
 
 	// R1CS to QAP
+	// TODO zxQAP is not used and is an old impl, bad calculated. TODO remove
 	alphas, betas, gammas, zxQAP := Utils.PF.R1CSToQAP(a, b, c)
 	fmt.Println("qap")
 	fmt.Println("alphas", len(alphas))
-	fmt.Println("alphas", alphas[0])
+	fmt.Println("alphas[1]", alphas[1])
 	fmt.Println("betas", len(betas))
 	fmt.Println("gammas", len(gammas))
 	fmt.Println("zx length", len(zxQAP))
@@ -63,6 +64,10 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	fmt.Println("bx length", len(bx))
 	fmt.Println("cx length", len(cx))
 	fmt.Println("px length", len(px))
+	fmt.Println("px[last]", px[0])
+	px0 := Utils.PF.F.Add(px[0], big.NewInt(int64(88)))
+	fmt.Println(px0)
+	assert.Equal(t, px0.Bytes(), Utils.PF.F.Zero().Bytes())
 
 	hxQAP := Utils.PF.DivisorPolynomial(px, zxQAP)
 	fmt.Println("hx length", len(hxQAP))
@@ -92,15 +97,18 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z)
 	fmt.Println("hx pk.z", hx)
 	// assert.Equal(t, hxQAP, hx)
+
 	assert.Equal(t, px, Utils.PF.Mul(hxQAP, zxQAP))
+	// hx==px/zx so px==hx*zx
 	assert.Equal(t, px, Utils.PF.Mul(hx, setup.Pk.Z))
 
+	// check length of polynomials H(x) and Z(x)
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 	assert.Equal(t, len(hxQAP), len(px)-len(zxQAP)+1)
+
 	// fmt.Println("pk.Z", len(setup.Pk.Z))
 	// fmt.Println("zxQAP", len(zxQAP))
 
-	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
 	proof, err := GenerateProofs(*circuit, setup, w, px)
 	assert.Nil(t, err)
 

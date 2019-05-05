@@ -99,12 +99,14 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	for i := 0; i < len(alphas); i++ {
 		for j := 0; j < len(alphas[i]); j++ {
 			if j <= circuit.NPublic {
-				if bytes.Equal(alphas[i][j].Bytes(), Utils.Bn.Fq1.Zero().Bytes()) {
-					alphas[i][j] = Utils.Bn.Fq1.One()
+				if bytes.Equal(alphas[i][j].Bytes(), Utils.FqR.Zero().Bytes()) {
+					alphas[i][j] = Utils.FqR.One()
 				}
 			}
 		}
 	}
+
+	fmt.Println("alphas[1]", alphas[1])
 
 	// generate random t value
 	setup.Toxic.T, err = Utils.FqR.Rand()
@@ -176,7 +178,8 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	// for i := 0; i < circuit.NVars; i++ {
 	for i := 0; i < len(circuit.Signals); i++ {
 		at := Utils.PF.Eval(alphas[i], setup.Toxic.T)
-		rhoAat := Utils.Bn.Fq1.Mul(setup.Toxic.RhoA, at)
+		// rhoAat := Utils.Bn.Fq1.Mul(setup.Toxic.RhoA, at)
+		rhoAat := Utils.FqR.Mul(setup.Toxic.RhoA, at)
 		a := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, rhoAat)
 		setup.Pk.A = append(setup.Pk.A, a)
 		if i <= circuit.NPublic {
@@ -184,13 +187,15 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 		}
 
 		bt := Utils.PF.Eval(betas[i], setup.Toxic.T)
-		rhoBbt := Utils.Bn.Fq1.Mul(setup.Toxic.RhoB, bt)
+		// rhoBbt := Utils.Bn.Fq1.Mul(setup.Toxic.RhoB, bt)
+		rhoBbt := Utils.FqR.Mul(setup.Toxic.RhoB, bt)
 		bg1 := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, rhoBbt)
 		bg2 := Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, rhoBbt)
 		setup.Pk.B = append(setup.Pk.B, bg2)
 
 		ct := Utils.PF.Eval(gammas[i], setup.Toxic.T)
-		rhoCct := Utils.Bn.Fq1.Mul(setup.Toxic.RhoC, ct)
+		// rhoCct := Utils.Bn.Fq1.Mul(setup.Toxic.RhoC, ct)
+		rhoCct := Utils.FqR.Mul(setup.Toxic.RhoC, ct)
 		c := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, rhoCct)
 		setup.Pk.C = append(setup.Pk.C, c)
 
@@ -212,8 +217,7 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 
 	// z pol
 	zpol := []*big.Int{big.NewInt(int64(1))}
-	// for i := 1; i < len(circuit.Constraints); i++ {
-	for i := 1; i <= circuit.NPublic; i++ { // circuit.NPublic == d
+	for i := 1; i < len(circuit.Constraints); i++ {
 		zpol = Utils.PF.Mul(
 			zpol,
 			[]*big.Int{
@@ -222,10 +226,12 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 				big.NewInt(int64(1)),
 			})
 	}
+	fmt.Println("zpol", zpol)
 	setup.Pk.Z = zpol
 
 	zt := Utils.PF.Eval(zpol, setup.Toxic.T)
-	rhoCzt := Utils.Bn.Fq1.Mul(setup.Toxic.RhoC, zt)
+	// rhoCzt := Utils.Bn.Fq1.Mul(setup.Toxic.RhoC, zt)
+	rhoCzt := Utils.FqR.Mul(setup.Toxic.RhoC, zt)
 	setup.Vk.Vkz = Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, rhoCzt)
 
 	// encrypt t values with curve generators
@@ -234,7 +240,8 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	tEncr := setup.Toxic.T
 	for i := 1; i < len(zpol); i++ { //should be G1T = pkH = (tau**i * G1) from i=0 to d, where d is degree of pol Z(x)
 		gt1 = append(gt1, Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, tEncr))
-		tEncr = Utils.Bn.Fq1.Mul(tEncr, setup.Toxic.T)
+		// tEncr = Utils.Bn.Fq1.Mul(tEncr, setup.Toxic.T)
+		tEncr = Utils.FqR.Mul(tEncr, setup.Toxic.T)
 	}
 	fmt.Println("len(G1T)", len(gt1))
 	setup.G1T = gt1
@@ -272,8 +279,8 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, 
 	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z) // maybe move this calculation to a previous step
 
 	// piH = pkH,0 + sum (  hi * pk H,i ), where pkH = G1T, hi=hx
-	proof.PiH = Utils.Bn.G1.Add(proof.PiH, setup.G1T[0])
-	for i := 1; i < len(setup.Pk.Z); i++ {
+	// proof.PiH = Utils.Bn.G1.Add(proof.PiH, setup.G1T[0])
+	for i := 0; i < len(hx); i++ {
 		proof.PiH = Utils.Bn.G1.Add(proof.PiH, Utils.Bn.G1.MulScalar(setup.G1T[i], hx[i]))
 	}
 

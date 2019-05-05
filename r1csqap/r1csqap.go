@@ -189,24 +189,24 @@ func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*bi
 
 // CombinePolynomials combine the given polynomials arrays into one, also returns the P(x)
 func (pf PolynomialField) CombinePolynomials(r []*big.Int, ap, bp, cp [][]*big.Int) ([]*big.Int, []*big.Int, []*big.Int, []*big.Int) {
-	var alpha []*big.Int
+	var ax []*big.Int
 	for i := 0; i < len(r); i++ {
 		m := pf.Mul([]*big.Int{r[i]}, ap[i])
-		alpha = pf.Add(alpha, m)
+		ax = pf.Add(ax, m)
 	}
-	var beta []*big.Int
+	var bx []*big.Int
 	for i := 0; i < len(r); i++ {
 		m := pf.Mul([]*big.Int{r[i]}, bp[i])
-		beta = pf.Add(beta, m)
+		bx = pf.Add(bx, m)
 	}
-	var gamma []*big.Int
+	var cx []*big.Int
 	for i := 0; i < len(r); i++ {
 		m := pf.Mul([]*big.Int{r[i]}, cp[i])
-		gamma = pf.Add(gamma, m)
+		cx = pf.Add(cx, m)
 	}
 
-	px := pf.Sub(pf.Mul(alpha, beta), gamma)
-	return alpha, beta, gamma, px
+	px := pf.Sub(pf.Mul(ax, bx), cx)
+	return ax, bx, cx, px
 }
 
 // DivisorPolynomial returns the divisor polynomial given two polynomials
