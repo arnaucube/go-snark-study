@@ -13,7 +13,8 @@ type Circuit struct {
 	NVars         int
 	NPublic       int
 	NSignals      int
-	Inputs        []string
+	PrivateInputs []string
+	PublicInputs  []string
 	Signals       []string
 	PublicSignals []string
 	Witness       []*big.Int
@@ -34,7 +35,8 @@ type Constraint struct {
 	Out     string
 	Literal string
 
-	Inputs []string // in func declaration case
+	PrivateInputs []string // in func declaration case
+	PublicInputs  []string // in func declaration case
 }
 
 func indexInArray(arr []string, e string) int {
@@ -99,7 +101,8 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 		}
 		used[constraint.Out] = true
 		if constraint.Op == "in" {
-			for i := 0; i < len(constraint.Inputs); i++ {
+			// TODO constraint.PublicInputs
+			for i := 0; i < len(constraint.PrivateInputs); i++ {
 				aConstraint[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Add(aConstraint[indexInArray(circ.Signals, constraint.Out)], big.NewInt(int64(1)))
 				aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.Out, used)
 				bConstraint[0] = big.NewInt(int64(1))
@@ -154,13 +157,16 @@ type Inputs struct {
 
 // CalculateWitness calculates the Witness of a Circuit based on the given inputs
 // witness = [ one, output, publicInputs, privateInputs, ...]
-func (circ *Circuit) CalculateWitness(inputs []*big.Int) ([]*big.Int, error) {
-	if len(inputs) != len(circ.Inputs) {
-		return []*big.Int{}, errors.New("given inputs != circuit.Inputs")
+func (circ *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*big.Int) ([]*big.Int, error) {
+	if len(privateInputs) != len(circ.PrivateInputs) {
+		return []*big.Int{}, errors.New("given privateInputs != circuit.PublicInputs")
+	}
+	if len(publicInputs) != len(circ.PublicInputs) {
+		return []*big.Int{}, errors.New("given publicInputs != circuit.PublicInputs")
 	}
 	w := r1csqap.ArrayOfBigZeros(len(circ.Signals))
 	w[0] = big.NewInt(int64(1))
-	for i, input := range inputs {
+	for i, input := range privateInputs {
 		w[i+2] = input
 	}
 	for _, constraint := range circ.Constraints {

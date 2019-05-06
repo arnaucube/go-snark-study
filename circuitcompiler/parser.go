@@ -2,7 +2,9 @@ package circuitcompiler
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -70,7 +72,41 @@ func (p *Parser) parseLine() (*Constraint, error) {
 		rgx := regexp.MustCompile(`\((.*?)\)`)
 		insideParenthesis := rgx.FindStringSubmatch(line)
 		varsString := strings.Replace(insideParenthesis[1], " ", "", -1)
-		c.Inputs = strings.Split(varsString, ",")
+		allInputs := strings.Split(varsString, ",")
+
+		// from allInputs, get the private and the public separated
+		for _, in := range allInputs {
+			if strings.Contains(in, "private") {
+				input := strings.Replace(in, "private", "", -1)
+				c.PrivateInputs = append(c.PrivateInputs, input)
+			} else if strings.Contains(in, "public") {
+				input := strings.Replace(in, "public", "", -1)
+				c.PublicInputs = append(c.PublicInputs, input)
+			} else {
+				// TODO give more info about the circuit code error
+				fmt.Println("error on declaration of public and private inputs")
+				os.Exit(0)
+			}
+		}
+		return c, nil
+	}
+	if c.Literal == "equals" {
+		// format: `equals(a, b)`
+		line, err := p.s.r.ReadString(')')
+		if err != nil {
+			return c, err
+		}
+		// read string inside ( )
+		rgx := regexp.MustCompile(`\((.*?)\)`)
+		insideParenthesis := rgx.FindStringSubmatch(line)
+		varsString := strings.Replace(insideParenthesis[1], " ", "", -1)
+		params := strings.Split(varsString, ",")
+		fmt.Println("params", params)
+		// TODO
+		return c, nil
+	}
+	if c.Literal == "out" {
+		// TODO
 		return c, nil
 	}
 
@@ -124,9 +160,10 @@ func (p *Parser) Parse() (*Circuit, error) {
 		if err != nil {
 			break
 		}
+		fmt.Println(constraint)
 		if constraint.Literal == "func" {
 			// one constraint for each input
-			for _, in := range constraint.Inputs {
+			for _, in := range constraint.PrivateInputs {
 				newConstr := &Constraint{
 					Op:  "in",
 					Out: in,
@@ -134,7 +171,21 @@ func (p *Parser) Parse() (*Circuit, error) {
 				circuit.Constraints = append(circuit.Constraints, *newConstr)
 				nInputs++
 			}
-			circuit.Inputs = constraint.Inputs
+			for _, in := range constraint.PublicInputs {
+				newConstr := &Constraint{
+					Op:  "in",
+					Out: in,
+				}
+				circuit.Constraints = append(circuit.Constraints, *newConstr)
+				nInputs++
+			}
+			circuit.PublicInputs = constraint.PublicInputs
+			circuit.PrivateInputs = constraint.PrivateInputs
+			continue
+		}
+		if constraint.Literal == "equals" {
+			// TODO
+			fmt.Println("circuit.Signals", circuit.Signals)
 			continue
 		}
 		circuit.Constraints = append(circuit.Constraints, *constraint)
