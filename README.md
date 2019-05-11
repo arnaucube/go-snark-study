@@ -6,7 +6,7 @@ zkSNARK library implementation in Go
 - `Succinct Non-Interactive Zero Knowledge for a von Neumann Architecture`, Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza https://eprint.iacr.org/2013/879.pdf
 - `Pinocchio: Nearly practical verifiable computation`, Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova https://eprint.iacr.org/2013/279.pdf
 
-## Caution
+## Caution, Warning
 Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) from scratch in Go to understand the concepts. Do not use in production.
 
 Not finished, implementing this in my free time to understand it better, so I don't have much time.
@@ -15,18 +15,18 @@ Current implementation status:
 - [x] Finite Fields (1, 2, 6, 12) operations
 - [x] G1 and G2 curve operations
 - [x] BN128 Pairing
-- [ ] circuit code compiler
+- [x] circuit code compiler
 	- [ ] code to flat code (improve circuit compiler)
 	- [x] flat code compiler
-	- [ ] private & public inputs. fix circuit compiler
 - [x] circuit to R1CS
 - [x] polynomial operations
 - [x] R1CS to QAP
 - [x] generate trusted setup
 - [x] generate proofs
 - [x] verify proofs with BN128 pairing
-	- [ ] fix 4th pairing proofs generation & verification: ê(Vkx+piA, piB) == ê(piH, Vkz) * ê(piC, G2)
 - [ ] move witness calculation outside the setup phase
+- [ ] Groth16
+- [ ] multiple optimizations
 
 
 ## Usage

@@ -2,7 +2,9 @@ package circuitcompiler
 
 import (
 	"errors"
+	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -70,9 +72,45 @@ func (p *Parser) parseLine() (*Constraint, error) {
 		rgx := regexp.MustCompile(`\((.*?)\)`)
 		insideParenthesis := rgx.FindStringSubmatch(line)
 		varsString := strings.Replace(insideParenthesis[1], " ", "", -1)
-		c.Inputs = strings.Split(varsString, ",")
+		allInputs := strings.Split(varsString, ",")
+
+		// from allInputs, get the private and the public separated
+		for _, in := range allInputs {
+			if strings.Contains(in, "private") {
+				input := strings.Replace(in, "private", "", -1)
+				c.PrivateInputs = append(c.PrivateInputs, input)
+			} else if strings.Contains(in, "public") {
+				input := strings.Replace(in, "public", "", -1)
+				c.PublicInputs = append(c.PublicInputs, input)
+			} else {
+				// TODO give more info about the circuit code error
+				fmt.Println("error on declaration of public and private inputs")
+				os.Exit(0)
+			}
+		}
 		return c, nil
 	}
+	if c.Literal == "equals" {
+		// format: `equals(a, b)`
+		line, err := p.s.r.ReadString(')')
+		if err != nil {
+			return c, err
+		}
+		// read string inside ( )
+		rgx := regexp.MustCompile(`\((.*?)\)`)
+		insideParenthesis := rgx.FindStringSubmatch(line)
+		varsString := strings.Replace(insideParenthesis[1], " ", "", -1)
+		params := strings.Split(varsString, ",")
+		fmt.Println("params", params)
+		// TODO
+		c.V1 = params[0]
+		c.V2 = params[1]
+		return c, nil
+	}
+	// if c.Literal == "out" {
+	//         // TODO
+	//         return c, nil
+	// }
 
 	_, lit = p.scanIgnoreWhitespace() // skip =
 	c.Literal += lit
@@ -124,17 +162,51 @@ func (p *Parser) Parse() (*Circuit, error) {
 		if err != nil {
 			break
 		}
+		fmt.Println(constraint)
 		if constraint.Literal == "func" {
 			// one constraint for each input
-			for _, in := range constraint.Inputs {
+			for _, in := range constraint.PublicInputs {
 				newConstr := &Constraint{
 					Op:  "in",
 					Out: in,
 				}
 				circuit.Constraints = append(circuit.Constraints, *newConstr)
 				nInputs++
+				circuit.Signals = addToArrayIfNotExist(circuit.Signals, in)
+				circuit.NPublic++
 			}
-			circuit.Inputs = constraint.Inputs
+			for _, in := range constraint.PrivateInputs {
+				newConstr := &Constraint{
+					Op:  "in",
+					Out: in,
+				}
+				circuit.Constraints = append(circuit.Constraints, *newConstr)
+				nInputs++
+				circuit.Signals = addToArrayIfNotExist(circuit.Signals, in)
+			}
+			circuit.PublicInputs = constraint.PublicInputs
+			circuit.PrivateInputs = constraint.PrivateInputs
+			continue
+		}
+		if constraint.Literal == "equals" {
+			// TODO
+			fmt.Println("circuit.Signals", circuit.Signals)
+			constr1 := &Constraint{
+				Op:      "*",
+				V1:      constraint.V2,
+				V2:      "1",
+				Out:     constraint.V1,
+				Literal: "equals(" + constraint.V1 + ", " + constraint.V2 + "): " + constraint.V1 + "==" + constraint.V2 + " * 1",
+			}
+			circuit.Constraints = append(circuit.Constraints, *constr1)
+			constr2 := &Constraint{
+				Op:      "*",
+				V1:      constraint.V1,
+				V2:      "1",
+				Out:     constraint.V2,
+				Literal: "equals(" + constraint.V1 + ", " + constraint.V2 + "): " + constraint.V2 + "==" + constraint.V1 + " * 1",
+			}
+			circuit.Constraints = append(circuit.Constraints, *constr2)
 			continue
 		}
 		circuit.Constraints = append(circuit.Constraints, *constraint)
@@ -146,21 +218,26 @@ func (p *Parser) Parse() (*Circuit, error) {
 		if !isVal {
 			circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.V2)
 		}
-		if constraint.Out == "out" {
-			// if Out is "out", put it after first value (one) and before the inputs
-			if !existInArray(circuit.Signals, constraint.Out) {
-				signalsCopy := copyArray(circuit.Signals)
-				var auxSignals []string
-				auxSignals = append(auxSignals, signalsCopy[0])
-				auxSignals = append(auxSignals, constraint.Out)
-				auxSignals = append(auxSignals, signalsCopy[1:]...)
-				circuit.Signals = auxSignals
-				circuit.PublicSignals = append(circuit.PublicSignals, constraint.Out)
-				circuit.NPublic++
-			}
-		} else {
-			circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.Out)
-		}
+
+		// if constraint.Out == "out" {
+		// if Out is "out", put it after first value (one) and before the inputs
+		// if constraint.Out == circuit.PublicInputs[0] {
+		// if existInArray(circuit.PublicInputs, constraint.Out) {
+		//         // if Out is a public signal, put it after first value (one) and before the private inputs
+		//         if !existInArray(circuit.Signals, constraint.Out) {
+		//                 // if already don't exists in signal array
+		//                 signalsCopy := copyArray(circuit.Signals)
+		//                 var auxSignals []string
+		//                 auxSignals = append(auxSignals, signalsCopy[0])
+		//                 auxSignals = append(auxSignals, constraint.Out)
+		//                 auxSignals = append(auxSignals, signalsCopy[1:]...)
+		//                 circuit.Signals = auxSignals
+		//                 // circuit.PublicInputs = append(circuit.PublicInputs, constraint.Out)
+		//                 circuit.NPublic++
+		//         }
+		// } else {
+		circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.Out)
+		// }
 	}
 	circuit.NVars = len(circuit.Signals)
 	circuit.NSignals = len(circuit.Signals)

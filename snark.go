@@ -1,7 +1,6 @@
 package snark
 
 import (
-	"bytes"
 	"fmt"
 	"math/big"
 	"os"
@@ -96,15 +95,15 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	var err error
 
 	// input soundness
-	for i := 0; i < len(alphas); i++ {
-		for j := 0; j < len(alphas[i]); j++ {
-			if j <= circuit.NPublic {
-				if bytes.Equal(alphas[i][j].Bytes(), Utils.FqR.Zero().Bytes()) {
-					alphas[i][j] = Utils.FqR.One()
-				}
-			}
-		}
-	}
+	// for i := 0; i < len(alphas); i++ {
+	//         for j := 0; j < len(alphas[i]); j++ {
+	//                 if j <= circuit.NPublic {
+	//                         if bytes.Equal(alphas[i][j].Bytes(), Utils.FqR.Zero().Bytes()) {
+	//                                 alphas[i][j] = Utils.FqR.One()
+	//                         }
+	//                 }
+	//         }
+	// }
 
 	fmt.Println("alphas[1]", alphas[1])
 
@@ -217,7 +216,8 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 
 	// z pol
 	zpol := []*big.Int{big.NewInt(int64(1))}
-	for i := 1; i < len(circuit.Constraints); i++ {
+	// for i := 0; i < len(circuit.Constraints); i++ {
+	for i := 1; i < len(alphas)-1; i++ {
 		zpol = Utils.PF.Mul(
 			zpol,
 			[]*big.Int{

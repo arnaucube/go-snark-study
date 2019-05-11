@@ -2,6 +2,7 @@ package circuitcompiler
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 
@@ -13,9 +14,9 @@ type Circuit struct {
 	NVars         int
 	NPublic       int
 	NSignals      int
-	Inputs        []string
+	PrivateInputs []string
+	PublicInputs  []string
 	Signals       []string
-	PublicSignals []string
 	Witness       []*big.Int
 	Constraints   []Constraint
 	R1CS          struct {
@@ -34,7 +35,8 @@ type Constraint struct {
 	Out     string
 	Literal string
 
-	Inputs []string // in func declaration case
+	PrivateInputs []string // in func declaration case
+	PublicInputs  []string // in func declaration case
 }
 
 func indexInArray(arr []string, e string) int {
@@ -95,11 +97,12 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 
 		// if existInArray(constraint.Out) {
 		if used[constraint.Out] {
-			panic(errors.New("out variable already used: " + constraint.Out))
+			// panic(errors.New("out variable already used: " + constraint.Out))
+			fmt.Println("variable already used")
 		}
 		used[constraint.Out] = true
 		if constraint.Op == "in" {
-			for i := 0; i < len(constraint.Inputs); i++ {
+			for i := 0; i <= len(circ.PublicInputs); i++ {
 				aConstraint[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Add(aConstraint[indexInArray(circ.Signals, constraint.Out)], big.NewInt(int64(1)))
 				aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.Out, used)
 				bConstraint[0] = big.NewInt(int64(1))
@@ -154,14 +157,23 @@ type Inputs struct {
 
 // CalculateWitness calculates the Witness of a Circuit based on the given inputs
 // witness = [ one, output, publicInputs, privateInputs, ...]
-func (circ *Circuit) CalculateWitness(inputs []*big.Int) ([]*big.Int, error) {
-	if len(inputs) != len(circ.Inputs) {
-		return []*big.Int{}, errors.New("given inputs != circuit.Inputs")
+func (circ *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*big.Int) ([]*big.Int, error) {
+	if len(privateInputs) != len(circ.PrivateInputs) {
+		return []*big.Int{}, errors.New("given privateInputs != circuit.PublicInputs")
+	}
+	if len(publicInputs) != len(circ.PublicInputs) {
+		return []*big.Int{}, errors.New("given publicInputs != circuit.PublicInputs")
 	}
 	w := r1csqap.ArrayOfBigZeros(len(circ.Signals))
 	w[0] = big.NewInt(int64(1))
-	for i, input := range inputs {
-		w[i+2] = input
+	for i, input := range publicInputs {
+		fmt.Println(i + 1)
+		fmt.Println(input)
+		w[i+1] = input
+	}
+	for i, input := range privateInputs {
+		fmt.Println(i + len(publicInputs) + 1)
+		w[i+len(publicInputs)+1] = input
 	}
 	for _, constraint := range circ.Constraints {
 		if constraint.Op == "in" {
