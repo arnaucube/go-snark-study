@@ -1,6 +1,7 @@
 package circuitcompiler
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -21,17 +22,20 @@ func TestCircuitParser(t *testing.T) {
 			m2 = m1 * s1
 			m3 = m2 + s1
 			out = m3 + 5
+
 	*/
 
 	// flat code, where er is expected_result
+	// equals(s5, s1)
+	// s1 = s5 * 1
 	flat := `
-	func test(private x, public er):
-		aux = x*x
-		y = aux*x
-		z = x + y
-		res = z + 5
-		equals(er, res)
-		out = 1
+	func test(private s0, public s1):
+		s2 = s0*s0
+		s3 = s2*s0
+		s4 = s0 + s3
+		s5 = s4 + 5
+		s5 = s1 * one
+		out = 1 * 1
 	`
 	parser := NewParser(strings.NewReader(flat))
 	circuit, err := parser.Parse()
@@ -84,4 +88,11 @@ func TestCircuitParser(t *testing.T) {
 	w, err := circuit.CalculateWitness(privateInputs, publicInputs)
 	assert.Nil(t, err)
 	fmt.Println("w", w)
+
+	circuitJson, _ := json.Marshal(circuit)
+	fmt.Println("circuit:", string(circuitJson))
+
+	assert.Equal(t, circuit.NPublic, 1)
+	assert.Equal(t, len(circuit.PublicInputs), 1)
+	assert.Equal(t, len(circuit.PrivateInputs), 1)
 }

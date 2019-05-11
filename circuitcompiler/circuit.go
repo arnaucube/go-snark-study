@@ -2,6 +2,7 @@ package circuitcompiler
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 
@@ -16,7 +17,6 @@ type Circuit struct {
 	PrivateInputs []string
 	PublicInputs  []string
 	Signals       []string
-	PublicSignals []string
 	Witness       []*big.Int
 	Constraints   []Constraint
 	R1CS          struct {
@@ -97,12 +97,12 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 
 		// if existInArray(constraint.Out) {
 		if used[constraint.Out] {
-			panic(errors.New("out variable already used: " + constraint.Out))
+			// panic(errors.New("out variable already used: " + constraint.Out))
+			fmt.Println("variable already used")
 		}
 		used[constraint.Out] = true
 		if constraint.Op == "in" {
-			// TODO constraint.PublicInputs
-			for i := 0; i < len(constraint.PrivateInputs); i++ {
+			for i := 0; i <= len(circ.PublicInputs); i++ {
 				aConstraint[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Add(aConstraint[indexInArray(circ.Signals, constraint.Out)], big.NewInt(int64(1)))
 				aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.Out, used)
 				bConstraint[0] = big.NewInt(int64(1))
@@ -166,8 +166,14 @@ func (circ *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*
 	}
 	w := r1csqap.ArrayOfBigZeros(len(circ.Signals))
 	w[0] = big.NewInt(int64(1))
+	for i, input := range publicInputs {
+		fmt.Println(i + 1)
+		fmt.Println(input)
+		w[i+1] = input
+	}
 	for i, input := range privateInputs {
-		w[i+2] = input
+		fmt.Println(i + len(publicInputs) + 1)
+		w[i+len(publicInputs)+1] = input
 	}
 	for _, constraint := range circ.Constraints {
 		if constraint.Op == "in" {

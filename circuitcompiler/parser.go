@@ -105,10 +105,10 @@ func (p *Parser) parseLine() (*Constraint, error) {
 		// TODO
 		return c, nil
 	}
-	if c.Literal == "out" {
-		// TODO
-		return c, nil
-	}
+	// if c.Literal == "out" {
+	//         // TODO
+	//         return c, nil
+	// }
 
 	_, lit = p.scanIgnoreWhitespace() // skip =
 	c.Literal += lit
@@ -197,16 +197,26 @@ func (p *Parser) Parse() (*Circuit, error) {
 		if !isVal {
 			circuit.Signals = addToArrayIfNotExist(circuit.Signals, constraint.V2)
 		}
-		if constraint.Out == "out" {
-			// if Out is "out", put it after first value (one) and before the inputs
+		// fmt.Println("---")
+		// fmt.Println(circuit.PublicInputs[0])
+		// fmt.Println(constraint.Out)
+		// fmt.Println(constraint.Out == circuit.PublicInputs[0])
+		// fmt.Println("---")
+
+		// if constraint.Out == "out" {
+		// if Out is "out", put it after first value (one) and before the inputs
+		// if constraint.Out == circuit.PublicInputs[0] {
+		if existInArray(circuit.PublicInputs, constraint.Out) {
+			// if Out is a public signal, put it after first value (one) and before the private inputs
 			if !existInArray(circuit.Signals, constraint.Out) {
+				// if already don't exists in signal array
 				signalsCopy := copyArray(circuit.Signals)
 				var auxSignals []string
 				auxSignals = append(auxSignals, signalsCopy[0])
 				auxSignals = append(auxSignals, constraint.Out)
 				auxSignals = append(auxSignals, signalsCopy[1:]...)
 				circuit.Signals = auxSignals
-				circuit.PublicSignals = append(circuit.PublicSignals, constraint.Out)
+				// circuit.PublicInputs = append(circuit.PublicInputs, constraint.Out)
 				circuit.NPublic++
 			}
 		} else {

@@ -6,7 +6,7 @@ zkSNARK library implementation in Go
 - `Succinct Non-Interactive Zero Knowledge for a von Neumann Architecture`, Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza https://eprint.iacr.org/2013/879.pdf
 - `Pinocchio: Nearly practical verifiable computation`, Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova https://eprint.iacr.org/2013/279.pdf
 
-## Caution
+## Caution, Warning, etc
 Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) from scratch in Go to understand the concepts. Do not use in production.
 
 Not finished, implementing this in my free time to understand it better, so I don't have much time.
@@ -27,6 +27,8 @@ Current implementation status:
 - [x] verify proofs with BN128 pairing
 	- [ ] fix 4th pairing proofs generation & verification: ê(Vkx+piA, piB) == ê(piH, Vkz) * ê(piC, G2)
 - [ ] move witness calculation outside the setup phase
+- [ ] Groth16
+- [ ] multiple optimizations
 
 
 ## Usage
