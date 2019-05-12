@@ -53,7 +53,7 @@ var commands = []cli.Command{
 func main() {
 	app := cli.NewApp()
 	app.Name = "go-snarks-cli"
-	app.Version = "0.1.0-alpha"
+	app.Version = "0.0.1-alpha"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "config"},
 	}
@@ -170,14 +170,20 @@ func TrustedSetup(context *cli.Context) error {
 	json.Unmarshal([]byte(string(compiledcircuitFile)), &circuit)
 	panicErr(err)
 
-	// read inputs file
-	inputsFile, err := ioutil.ReadFile("inputs.json")
+	// read privateInputs file
+	privateInputsFile, err := ioutil.ReadFile("privateInputs.json")
 	panicErr(err)
+	// read publicInputs file
+	publicInputsFile, err := ioutil.ReadFile("publicInputs.json")
+	panicErr(err)
+
 	// parse inputs from inputsFile
-	// var inputs []*big.Int
 	var inputs circuitcompiler.Inputs
-	json.Unmarshal([]byte(string(inputsFile)), &inputs)
+	err = json.Unmarshal([]byte(string(privateInputsFile)), &inputs.Private)
 	panicErr(err)
+	err = json.Unmarshal([]byte(string(publicInputsFile)), &inputs.Public)
+	panicErr(err)
+
 	// calculate wittness
 	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
 	panicErr(err)
@@ -245,23 +251,22 @@ func GenerateProofs(context *cli.Context) error {
 	// calculate wittness
 	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
 	panicErr(err)
-	fmt.Println("\nwitness", w)
+	fmt.Println("witness", w)
 
 	// flat code to R1CS
-	// a, b, c := circuit.GenerateR1CS()
 	a := circuit.R1CS.A
 	b := circuit.R1CS.B
 	c := circuit.R1CS.C
 	// R1CS to QAP
-	alphas, betas, gammas, zx := snark.Utils.PF.R1CSToQAP(a, b, c)
+	alphas, betas, gammas, _ := snark.Utils.PF.R1CSToQAP(a, b, c)
 	_, _, _, px := snark.Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
-	hx := snark.Utils.PF.DivisorPolynomial(px, zx)
+	hx := snark.Utils.PF.DivisorPolynomial(px, trustedsetup.Pk.Z)
 
 	fmt.Println(circuit)
 	fmt.Println(trustedsetup.G1T)
 	fmt.Println(hx)
 	fmt.Println(w)
-	proof, err := snark.GenerateProofs(circuit, trustedsetup, hx, w)
+	proof, err := snark.GenerateProofs(circuit, trustedsetup, w, px)
 	panicErr(err)
 
 	fmt.Println("\n proofs:")
