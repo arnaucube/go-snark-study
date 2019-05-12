@@ -80,18 +80,22 @@ func CompileCircuit(context *cli.Context) error {
 	panicErr(err)
 	fmt.Println("\ncircuit data:", circuit)
 
-	// read inputs file
-	inputsFile, err := ioutil.ReadFile("inputs.json")
+	// read privateInputs file
+	privateInputsFile, err := ioutil.ReadFile("privateInputs.json")
+	panicErr(err)
+	// read publicInputs file
+	publicInputsFile, err := ioutil.ReadFile("publicInputs.json")
 	panicErr(err)
 
 	// parse inputs from inputsFile
-	// var inputs []*big.Int
 	var inputs circuitcompiler.Inputs
-	json.Unmarshal([]byte(string(inputsFile)), &inputs)
+	err = json.Unmarshal([]byte(string(privateInputsFile)), &inputs.Private)
+	panicErr(err)
+	err = json.Unmarshal([]byte(string(publicInputsFile)), &inputs.Public)
 	panicErr(err)
 
 	// calculate wittness
-	w, err := circuit.CalculateWitness(inputs.Private)
+	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
 	panicErr(err)
 	fmt.Println("\nwitness", w)
 
@@ -175,18 +179,18 @@ func TrustedSetup(context *cli.Context) error {
 	json.Unmarshal([]byte(string(inputsFile)), &inputs)
 	panicErr(err)
 	// calculate wittness
-	w, err := circuit.CalculateWitness(inputs.Private)
+	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
 	panicErr(err)
 
 	// R1CS to QAP
-	alphas, betas, gammas, zx := snark.Utils.PF.R1CSToQAP(circuit.R1CS.A, circuit.R1CS.B, circuit.R1CS.C)
+	alphas, betas, gammas, _ := snark.Utils.PF.R1CSToQAP(circuit.R1CS.A, circuit.R1CS.B, circuit.R1CS.C)
 	fmt.Println("qap")
 	fmt.Println(alphas)
 	fmt.Println(betas)
 	fmt.Println(gammas)
 
 	// calculate trusted setup
-	setup, err := snark.GenerateTrustedSetup(len(w), circuit, alphas, betas, gammas, zx)
+	setup, err := snark.GenerateTrustedSetup(len(w), circuit, alphas, betas, gammas)
 	panicErr(err)
 	fmt.Println("\nt:", setup.Toxic.T)
 
@@ -225,16 +229,21 @@ func GenerateProofs(context *cli.Context) error {
 	json.Unmarshal([]byte(string(trustedsetupFile)), &trustedsetup)
 	panicErr(err)
 
-	// read inputs file
-	inputsFile, err := ioutil.ReadFile("inputs.json")
+	// read privateInputs file
+	privateInputsFile, err := ioutil.ReadFile("privateInputs.json")
+	panicErr(err)
+	// read publicInputs file
+	publicInputsFile, err := ioutil.ReadFile("publicInputs.json")
 	panicErr(err)
 	// parse inputs from inputsFile
-	// var inputs []*big.Int
 	var inputs circuitcompiler.Inputs
-	json.Unmarshal([]byte(string(inputsFile)), &inputs)
+	err = json.Unmarshal([]byte(string(privateInputsFile)), &inputs.Private)
 	panicErr(err)
+	err = json.Unmarshal([]byte(string(publicInputsFile)), &inputs.Public)
+	panicErr(err)
+
 	// calculate wittness
-	w, err := circuit.CalculateWitness(inputs.Private)
+	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
 	panicErr(err)
 	fmt.Println("\nwitness", w)
 
@@ -293,7 +302,13 @@ func VerifyProofs(context *cli.Context) error {
 	json.Unmarshal([]byte(string(trustedsetupFile)), &trustedsetup)
 	panicErr(err)
 
-	// TODO read publicSignals from file
+	// read publicInputs file
+	publicInputsFile, err := ioutil.ReadFile("publicInputs.json")
+	panicErr(err)
+	var publicSignals []*big.Int
+	err = json.Unmarshal([]byte(string(publicInputsFile)), &publicSignals)
+	panicErr(err)
+
 	verified := snark.VerifyProof(circuit, trustedsetup, proof, publicSignals, true)
 	if !verified {
 		fmt.Println("ERROR: proofs not verified")

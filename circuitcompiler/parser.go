@@ -101,8 +101,6 @@ func (p *Parser) parseLine() (*Constraint, error) {
 		insideParenthesis := rgx.FindStringSubmatch(line)
 		varsString := strings.Replace(insideParenthesis[1], " ", "", -1)
 		params := strings.Split(varsString, ",")
-		fmt.Println("params", params)
-		// TODO
 		c.V1 = params[0]
 		c.V2 = params[1]
 		return c, nil
@@ -162,7 +160,6 @@ func (p *Parser) Parse() (*Circuit, error) {
 		if err != nil {
 			break
 		}
-		fmt.Println(constraint)
 		if constraint.Literal == "func" {
 			// one constraint for each input
 			for _, in := range constraint.PublicInputs {
@@ -189,8 +186,6 @@ func (p *Parser) Parse() (*Circuit, error) {
 			continue
 		}
 		if constraint.Literal == "equals" {
-			// TODO
-			fmt.Println("circuit.Signals", circuit.Signals)
 			constr1 := &Constraint{
 				Op:      "*",
 				V1:      constraint.V2,
