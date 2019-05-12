@@ -43,11 +43,13 @@ Example:
 ```go
 // compile circuit and get the R1CS
 flatCode := `
-func test(x):
-	aux = x*x
-	y = aux*x
-	z = x + y
-	out = z + 5
+func test(private s0, public s1):
+	s2 = s0 * s0
+	s3 = s2 * s0
+	s4 = s3 + s0
+	s5 = s4 + 5
+	equals(s1, s5)
+	out = 1 * 1
 `
 
 // parse the code
@@ -56,15 +58,19 @@ circuit, err := parser.Parse()
 assert.Nil(t, err)
 fmt.Println(circuit)
 
-// witness
+
 b3 := big.NewInt(int64(3))
-inputs := []*big.Int{b3}
-w := circuit.CalculateWitness(inputs)
-fmt.Println("\nwitness", w)
-/*
-now we have the witness:
-w = [1 3 35 9 27 30]
-*/
+privateInputs := []*big.Int{b3}
+b35 := big.NewInt(int64(35))
+publicSignals := []*big.Int{b35}
+
+// witness
+w, err := circuit.CalculateWitness(privateInputs, publicSignals)
+assert.Nil(t, err)
+fmt.Println("witness", w)
+
+// now we have the witness:
+// w = [1 35 3 9 27 30 35 1]
 
 // flat code to R1CS
 fmt.Println("generating R1CS from flat code")
@@ -72,42 +78,27 @@ a, b, c := circuit.GenerateR1CS()
 
 /*
 now we have the R1CS from the circuit:
-a == [[0 1 0 0 0 0] [0 0 0 1 0 0] [0 1 0 0 1 0] [5 0 0 0 0 1]]
-b == [[0 1 0 0 0 0] [0 1 0 0 0 0] [1 0 0 0 0 0] [1 0 0 0 0 0]]
-c == [[0 0 0 1 0 0] [0 0 0 0 1 0] [0 0 0 0 0 1] [0 0 1 0 0 0]]
+a: [[0 0 1 0 0 0 0 0] [0 0 0 1 0 0 0 0] [0 0 1 0 1 0 0 0] [5 0 0 0 0 1 0 0] [0 0 0 0 0 0 1 0] [0 1 0 0 0 0 0 0] [1 0 0 0 0 0 0 0]]
+b: [[0 0 1 0 0 0 0 0] [0 0 1 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0]]
+c: [[0 0 0 1 0 0 0 0] [0 0 0 0 1 0 0 0] [0 0 0 0 0 1 0 0] [0 0 0 0 0 0 1 0] [0 1 0 0 0 0 0 0] [0 0 0 0 0 0 1 0] [0 0 0 0 0 0 0 1]]
 */
 
 
-alphas, betas, gammas, zx := snark.Utils.PF.R1CSToQAP(a, b, c)
+alphas, betas, gammas, _ := snark.Utils.PF.R1CSToQAP(a, b, c)
 
 
-ax, bx, cx, px := snark.Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
-
-hx := snark.Utils.PF.DivisorPolinomial(px, zx)
-
-// hx==px/zx so px==hx*zx
-assert.Equal(t, px, snark.Utils.PF.Mul(hx, zx))
-
-// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
-abc := snark.Utils.PF.Sub(pf.Mul(ax, bx), cx)
-assert.Equal(t, abc, px)
-hz := snark.Utils.PF.Mul(hx, zx)
-assert.Equal(t, abc, hz)
-	
-div, rem := snark.Utils.PF.Div(px, zx)
-assert.Equal(t, hx, div)
-assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
+ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
 
 // calculate trusted setup
-setup, err := snark.GenerateTrustedSetup(len(w), circuit, alphas, betas, gammas, zx)
-assert.Nil(t, err)
-fmt.Println("t", setup.Toxic.T)
+setup, err := GenerateTrustedSetup(len(w), *circuit, alphas, betas, gammas)
 
-// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-proof, err := snark.GenerateProofs(circuit, setup, hx, w)
-assert.Nil(t, err)
+hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z)
 
-assert.True(t, snark.VerifyProof(circuit, setup, proof))
+proof, err := GenerateProofs(*circuit, setup, w, px)
+
+b35Verif := big.NewInt(int64(35))
+publicSignalsVerif := []*big.Int{b35Verif}
+assert.True(t, VerifyProof(*circuit, setup, proof, publicSignalsVerif, true))
 ```
 
 ### CLI usage
@@ -115,16 +106,24 @@ assert.True(t, snark.VerifyProof(circuit, setup, proof))
 #### Compile circuit
 Having a circuit file `test.circuit`:
 ```
-func test(x):
-	aux = x*x
-	y = aux*x
-	z = x + y
-	out = z + 5
+func test(private s0, public s1):
+	s2 = s0 * s0
+	s3 = s2 * s0
+	s4 = s3 + s0
+	s5 = s4 + 5
+	equals(s1, s5)
+	out = 1 * 1
 ```
-And a inputs file `inputs.json`
+And a private inputs file `privateInputs.json`
 ```
 [
 	3
+]
+```
+And a public inputs file `publicInputs.json`
+```
+[
+	35
 ]
 ```
 
@@ -144,7 +143,7 @@ This will create the file `trustedsetup.json` with the TrustedSetup data, and al
 
 
 #### Generate Proofs
-Assumming that we have the `compiledcircuit.json` and the `trustedsetup.json`, we can now generate the `Proofs` with the following command:
+Assumming that we have the `compiledcircuit.json`, `trustedsetup.json`, `privateInputs.json` and the `publicInputs.json` we can now generate the `Proofs` with the following command:
 ```
 > go-snark-cli genproofs
 ```
@@ -152,7 +151,7 @@ Assumming that we have the `compiledcircuit.json` and the `trustedsetup.json`, w
 This will store the file `proofs.json`, that contains all the SNARK proofs.
 
 #### Verify Proofs
-Having the `proofs.json`, `compiledcircuit.json`, `trustedsetup.json` files, we can now verify the `Pairings` of the proofs, in order to verify the proofs.
+Having the `proofs.json`, `compiledcircuit.json`, `trustedsetup.json` `publicInputs.json` files, we can now verify the `Pairings` of the proofs, in order to verify the proofs.
 ```
 > go-snark-cli verify
 ```

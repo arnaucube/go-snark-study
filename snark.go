@@ -105,8 +105,6 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	//         }
 	// }
 
-	fmt.Println("alphas[1]", alphas[1])
-
 	// generate random t value
 	setup.Toxic.T, err = Utils.FqR.Rand()
 	if err != nil {
@@ -226,7 +224,6 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 				big.NewInt(int64(1)),
 			})
 	}
-	fmt.Println("zpol", zpol)
 	setup.Pk.Z = zpol
 
 	zt := Utils.PF.Eval(zpol, setup.Toxic.T)
@@ -243,7 +240,6 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 		// tEncr = Utils.Bn.Fq1.Mul(tEncr, setup.Toxic.T)
 		tEncr = Utils.FqR.Mul(tEncr, setup.Toxic.T)
 	}
-	fmt.Println("len(G1T)", len(gt1))
 	setup.G1T = gt1
 
 	return setup, nil
@@ -293,6 +289,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	pairingPiaVa := Utils.Bn.Pairing(proof.PiA, setup.Vk.Vka)
 	pairingPiapG2 := Utils.Bn.Pairing(proof.PiAp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingPiaVa, pairingPiapG2) {
+		fmt.Println("❌ e(piA, Va) == e(piA', g2), valid knowledge commitment for A")
 		return false
 	}
 	if debug {
@@ -303,6 +300,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	pairingVbPib := Utils.Bn.Pairing(setup.Vk.Vkb, proof.PiB)
 	pairingPibpG2 := Utils.Bn.Pairing(proof.PiBp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingVbPib, pairingPibpG2) {
+		fmt.Println("❌ e(Vb, piB) == e(piB', g2), valid knowledge commitment for B")
 		return false
 	}
 	if debug {
@@ -313,6 +311,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	pairingPicVc := Utils.Bn.Pairing(proof.PiC, setup.Vk.Vkc)
 	pairingPicpG2 := Utils.Bn.Pairing(proof.PiCp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingPicVc, pairingPicpG2) {
+		fmt.Println("❌ e(piC, Vc) == e(piC', g2), valid knowledge commitment for C")
 		return false
 	}
 	if debug {
@@ -322,7 +321,6 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	// Vkx, to then calculate Vkx+piA
 	vkxpia := setup.Vk.IC[0]
 	for i := 0; i < len(publicSignals); i++ {
-		fmt.Println("pub sig", publicSignals[i])
 		vkxpia = Utils.Bn.G1.Add(vkxpia, Utils.Bn.G1.MulScalar(setup.Vk.IC[i+1], publicSignals[i]))
 	}
 
@@ -332,6 +330,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 		Utils.Bn.Fq12.Mul(
 			Utils.Bn.Pairing(proof.PiH, setup.Vk.Vkz),
 			Utils.Bn.Pairing(proof.PiC, Utils.Bn.G2.G))) {
+		fmt.Println("❌ e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2), QAP disibility checked")
 		return false
 	}
 	if debug {
@@ -346,6 +345,7 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	pairingL := Utils.Bn.Fq12.Mul(pairingPiACG2Kbg, pairingG1KbgPiB)
 	pairingR := Utils.Bn.Pairing(proof.PiKp, setup.Vk.G2Kg)
 	if !Utils.Bn.Fq12.Equal(pairingL, pairingR) {
+		fmt.Println("❌ e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB) == e(piK, g2Kgamma)")
 		return false
 	}
 	if debug {

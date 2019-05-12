@@ -2,7 +2,6 @@ package circuitcompiler
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"strconv"
 
@@ -96,10 +95,9 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 		cConstraint := r1csqap.ArrayOfBigZeros(len(circ.Signals))
 
 		// if existInArray(constraint.Out) {
-		if used[constraint.Out] {
-			// panic(errors.New("out variable already used: " + constraint.Out))
-			fmt.Println("variable already used")
-		}
+		// if used[constraint.Out] {
+		// panic(errors.New("out variable already used: " + constraint.Out))
+		// }
 		used[constraint.Out] = true
 		if constraint.Op == "in" {
 			for i := 0; i <= len(circ.PublicInputs); i++ {
@@ -152,7 +150,7 @@ func grabVar(signals []string, w []*big.Int, vStr string) *big.Int {
 
 type Inputs struct {
 	Private []*big.Int
-	Publics []*big.Int
+	Public  []*big.Int
 }
 
 // CalculateWitness calculates the Witness of a Circuit based on the given inputs
@@ -167,12 +165,9 @@ func (circ *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*
 	w := r1csqap.ArrayOfBigZeros(len(circ.Signals))
 	w[0] = big.NewInt(int64(1))
 	for i, input := range publicInputs {
-		fmt.Println(i + 1)
-		fmt.Println(input)
 		w[i+1] = input
 	}
 	for i, input := range privateInputs {
-		fmt.Println(i + len(publicInputs) + 1)
 		w[i+len(publicInputs)+1] = input
 	}
 	for _, constraint := range circ.Constraints {
