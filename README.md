@@ -36,6 +36,63 @@ Current implementation status:
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/r1csqap?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/r1csqap) R1CS to QAP (more details: https://github.com/arnaucube/go-snark/tree/master/r1csqap)
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler) Circuit Compiler
 
+### CLI usage
+
+#### Compile circuit
+Having a circuit file `test.circuit`:
+```
+func test(private s0, public s1):
+	s2 = s0 * s0
+	s3 = s2 * s0
+	s4 = s3 + s0
+	s5 = s4 + 5
+	equals(s1, s5)
+	out = 1 * 1
+```
+And a private inputs file `privateInputs.json`
+```
+[
+	3
+]
+```
+And a public inputs file `publicInputs.json`
+```
+[
+	35
+]
+```
+
+In the command line, execute:
+```
+> ./go-snark-cli compile test.circuit
+```
+
+This will output the `compiledcircuit.json` file.
+
+#### Trusted Setup
+Having the `compiledcircuit.json`, now we can generate the `TrustedSetup`:
+```
+> ./go-snark-cli trustedsetup
+```
+This will create the file `trustedsetup.json` with the TrustedSetup data, and also a `toxic.json` file, with the parameters to delete from the `Trusted Setup`.
+
+
+#### Generate Proofs
+Assumming that we have the `compiledcircuit.json`, `trustedsetup.json`, `privateInputs.json` and the `publicInputs.json` we can now generate the `Proofs` with the following command:
+```
+> ./go-snark-cli genproofs
+```
+
+This will store the file `proofs.json`, that contains all the SNARK proofs.
+
+#### Verify Proofs
+Having the `proofs.json`, `compiledcircuit.json`, `trustedsetup.json` `publicInputs.json` files, we can now verify the `Pairings` of the proofs, in order to verify the proofs.
+```
+> ./go-snark-cli verify
+```
+This will return a `true` if the proofs are verified, or a `false` if the proofs are not verified.
+
+
 ### Library usage
 Warning: not finished.
 
@@ -100,62 +157,6 @@ b35Verif := big.NewInt(int64(35))
 publicSignalsVerif := []*big.Int{b35Verif}
 assert.True(t, VerifyProof(*circuit, setup, proof, publicSignalsVerif, true))
 ```
-
-### CLI usage
-
-#### Compile circuit
-Having a circuit file `test.circuit`:
-```
-func test(private s0, public s1):
-	s2 = s0 * s0
-	s3 = s2 * s0
-	s4 = s3 + s0
-	s5 = s4 + 5
-	equals(s1, s5)
-	out = 1 * 1
-```
-And a private inputs file `privateInputs.json`
-```
-[
-	3
-]
-```
-And a public inputs file `publicInputs.json`
-```
-[
-	35
-]
-```
-
-In the command line, execute:
-```
-> go-snark-cli compile test.circuit
-```
-
-This will output the `compiledcircuit.json` file.
-
-#### Trusted Setup
-Having the `compiledcircuit.json`, now we can generate the `TrustedSetup`:
-```
-> go-snark-cli trustedsetup
-```
-This will create the file `trustedsetup.json` with the TrustedSetup data, and also a `toxic.json` file, with the parameters to delete from the `Trusted Setup`.
-
-
-#### Generate Proofs
-Assumming that we have the `compiledcircuit.json`, `trustedsetup.json`, `privateInputs.json` and the `publicInputs.json` we can now generate the `Proofs` with the following command:
-```
-> go-snark-cli genproofs
-```
-
-This will store the file `proofs.json`, that contains all the SNARK proofs.
-
-#### Verify Proofs
-Having the `proofs.json`, `compiledcircuit.json`, `trustedsetup.json` `publicInputs.json` files, we can now verify the `Pairings` of the proofs, in order to verify the proofs.
-```
-> go-snark-cli verify
-```
-This will return a `true` if the proofs are verified, or a `false` if the proofs are not verified.
 
 
 

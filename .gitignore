@@ -1,6 +1,7 @@
 *.Backup
 cli/compiledcircuit.json
-cli/inputs.json
+cli/privateInputs.json
+cli/publicInputs.json
 cli/proofs.json
 cli/test.circuit
 cli/trustedsetup.json
