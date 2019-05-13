@@ -3,7 +3,7 @@ package bn128
 import (
 	"math/big"
 
-	"github.com/arnaucube/go-snark/fields"
+	"github.com/mottla/go-snark/fields"
 )
 
 type G1 struct {

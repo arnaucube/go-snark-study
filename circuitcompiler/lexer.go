@@ -10,24 +10,49 @@ type OperatorSymbol int
 type Token int
 
 const (
-	ILLEGAL Token = iota
+	ILLEGAL Token = 1 << iota
 	WS
 	EOF
-
+	FUNC
 	IDENT // val
-
-	VAR   // var
-	CONST // const value
-
+	IN
+	VAR      // var
+	CONST    // const value
 	EQ       // =
 	PLUS     // +
 	MINUS    // -
 	MULTIPLY // *
 	DIVIDE   // /
 	EXP      // ^
-
 	OUT
 )
+
+func (ch Token) String() string {
+	switch ch {
+	case EQ:
+		return "="
+	case PLUS:
+		return "+"
+	case MINUS:
+		return "-"
+	case MULTIPLY:
+		return "*"
+	case DIVIDE:
+		return "/"
+	case EXP:
+		return "^"
+	case FUNC:
+		return "func"
+	case IN:
+		return "In"
+	case CONST:
+		return "Const"
+	default:
+		return "unknown Token"
+
+	}
+
+}
 
 var eof = rune(0)
 
@@ -96,6 +121,8 @@ func (s *Scanner) scan() (tok Token, lit string) {
 		return DIVIDE, "/"
 	case '^':
 		return EXP, "^"
+		//case '(':
+		//	return EXP, "func"
 	}
 
 	return ILLEGAL, string(ch)
@@ -121,9 +148,19 @@ func (s *Scanner) scanWhitespace() (token Token, lit string) {
 func (s *Scanner) scanIndent() (tok Token, lit string) {
 	var buf bytes.Buffer
 	buf.WriteRune(s.read())
-
+	tok = IDENT
 	for {
 		if ch := s.read(); ch == eof {
+			break
+		} else if ch == '(' {
+			tok = FUNC
+			_, _ = buf.WriteRune(ch)
+		} else if ch == ',' && tok == FUNC {
+			_, _ = buf.WriteRune(ch)
+		} else if isWhitespace(ch) && tok == FUNC {
+			continue
+		} else if ch == ')' && tok == FUNC {
+			_, _ = buf.WriteRune(ch)
 			break
 		} else if !isLetter(ch) && !isDigit(ch) {
 			s.unread()
@@ -132,6 +169,7 @@ func (s *Scanner) scanIndent() (tok Token, lit string) {
 			_, _ = buf.WriteRune(ch)
 		}
 	}
+
 	switch buf.String() {
 	case "var":
 		return VAR, buf.String()

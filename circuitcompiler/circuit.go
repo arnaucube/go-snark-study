@@ -2,10 +2,11 @@ package circuitcompiler
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
+	"regexp"
 	"strconv"
-
-	"github.com/arnaucube/go-snark/r1csqap"
+	"strings"
 )
 
 // Circuit is the data structure of the compiled circuit
@@ -13,37 +14,322 @@ type Circuit struct {
 	NVars         int
 	NPublic       int
 	NSignals      int
-	PrivateInputs []string
-	PublicInputs  []string
+	Inputs        []string
 	Signals       []string
+	PublicSignals []string
 	Witness       []*big.Int
-	Constraints   []Constraint
-	R1CS          struct {
+	Name          string
+	root          *gate
+	//after reducing
+	constraintMap map[string]*Constraint
+	//used          map[string]bool
+	R1CS struct {
 		A [][]*big.Int
 		B [][]*big.Int
 		C [][]*big.Int
 	}
 }
 
+type gate struct {
+	index      int
+	left       *gate
+	right      *gate
+	funcInputs []*gate
+	value      *Constraint
+	leftIns    map[string]int //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
+	rightIns   map[string]int
+}
+
+func (g gate) String() string {
+	return fmt.Sprintf("Gate %v : %v  with left %v right %v", g.index, g.value, g.leftIns, g.rightIns)
+}
+
+//type variable struct {
+//	val string
+//}
+
 // Constraint is the data structure of a flat code operation
 type Constraint struct {
 	// v1 op v2 = out
-	Op      string
-	V1      string
-	V2      string
-	Out     string
-	Literal string
-
-	PrivateInputs []string // in func declaration case
-	PublicInputs  []string // in func declaration case
+	Op  Token
+	V1  string
+	V2  string
+	Out string
+	//fV1  *variable
+	//fV2  *variable
+	//fOut *variable
+	//Literal string
+	Inputs []string // in func declaration case
+	//fInputs []*variable
+	negate bool
+	invert bool
 }
 
+func (c Constraint) String() string {
+	if c.negate || c.invert {
+		return fmt.Sprintf("|%v = %v %v %v|  negated: %v, inverted %v", c.Out, c.V1, c.Op, c.V2, c.negate, c.invert)
+	}
+	return fmt.Sprintf("|%v = %v %v %v|", c.Out, c.V1, c.Op, c.V2)
+}
+
+func newCircuit(name string) *Circuit {
+	return &Circuit{Name: name, constraintMap: make(map[string]*Constraint)}
+}
+
+func (g *gate) addLeft(c *Constraint) {
+	if g.left != nil {
+		panic("already set left gate")
+	}
+	g.left = &gate{value: c}
+}
+func (g *gate) addRight(c *Constraint) {
+	if g.right != nil {
+		panic("already set left gate")
+	}
+	g.right = &gate{value: c}
+}
+
+func (circ *Circuit) addConstraint(constraint *Constraint) {
+	if _, ex := circ.constraintMap[constraint.Out]; ex {
+		panic("already used FlatConstraint")
+	}
+
+	if constraint.Op == DIVIDE {
+		constraint.Op = MULTIPLY
+		constraint.invert = true
+	} else if constraint.Op == MINUS {
+		constraint.Op = PLUS
+		constraint.negate = true
+	}
+
+	//todo this is dangerous.. if someone would use out as variable name, things would be fucked
+	if constraint.Out == "out" {
+		constraint.Out = composeNewFunction(circ.Name, circ.Inputs)
+		if circ.Name == "main" {
+			//the main functions output must be a multiplication gate
+			//if its not, then we simple create one where outNew = 1 * outOld
+			if constraint.Op&(MINUS|PLUS) != 0 {
+				newOut := &Constraint{Out: constraint.Out, V1: "one", V2: "out2", Op: MULTIPLY}
+				delete(circ.constraintMap, constraint.Out)
+				circ.addConstraint(newOut)
+				constraint.Out = "out2"
+				circ.addConstraint(constraint)
+			}
+		}
+	}
+
+	addConstantsAndFunctions := func(constraint string) {
+		if b, _ := isValue(constraint); b {
+			circ.constraintMap[constraint] = &Constraint{Op: CONST, Out: constraint}
+		} else if b, _, inputs := isFunction(constraint); b {
+
+			//check if function input is a constant like foo(a,4)
+			for _, in := range inputs {
+				if b, _ := isValue(in); b {
+					circ.constraintMap[in] = &Constraint{Op: CONST, Out: in}
+				}
+			}
+			circ.constraintMap[constraint] = &Constraint{Op: FUNC, Out: constraint, Inputs: inputs}
+		}
+	}
+
+	addConstantsAndFunctions(constraint.V1)
+	addConstantsAndFunctions(constraint.V2)
+
+	circ.constraintMap[constraint.Out] = constraint
+}
+
+func (circ *Circuit) renameInputs(inputs []string) {
+	if len(inputs) != len(circ.Inputs) {
+		panic("given inputs != circuit.Inputs")
+	}
+	mapping := make(map[string]string)
+	for i := 0; i < len(inputs); i++ {
+		if _, ex := circ.constraintMap[inputs[i]]; ex {
+
+			//this is a tricky part. So we replace former inputs with the new ones, thereby
+			//it might be, that the new input name has already been used for some output inside the function
+			//currently I dont know an elegant way how to handle this renaming issue
+			if circ.constraintMap[inputs[i]].Op != IN {
+				panic(fmt.Sprintf("renaming collsion with %s", inputs[i]))
+			}
+
+		}
+		mapping[circ.Inputs[i]] = inputs[i]
+	}
+	//fmt.Println(mapping)
+	circ.Inputs = inputs
+	permute := func(in string) string {
+		if out, ex := mapping[in]; ex {
+			return out
+		}
+		return in
+	}
+
+	permuteListe := func(in []string) []string {
+		for i := 0; i < len(in); i++ {
+			in[i] = permute(in[i])
+		}
+		return in
+	}
+
+	for _, constraint := range circ.constraintMap {
+
+		if constraint.Op == IN {
+			constraint.Out = permute(constraint.Out)
+			continue
+		}
+
+		if b, n, in := isFunction(constraint.Out); b {
+			constraint.Out = composeNewFunction(n, permuteListe(in))
+			constraint.Inputs = permuteListe(in)
+		}
+		if b, n, in := isFunction(constraint.V1); b {
+			constraint.V1 = composeNewFunction(n, permuteListe(in))
+			constraint.Inputs = permuteListe(in)
+		}
+		if b, n, in := isFunction(constraint.V2); b {
+			constraint.V2 = composeNewFunction(n, permuteListe(in))
+			constraint.Inputs = permuteListe(in)
+		}
+
+		constraint.V1 = permute(constraint.V1)
+		constraint.V2 = permute(constraint.V2)
+
+	}
+	return
+}
+
+func composeNewFunction(fname string, inputs []string) string {
+	builder := strings.Builder{}
+	builder.WriteString(fname)
+	builder.WriteRune('(')
+	for i := 0; i < len(inputs); i++ {
+		builder.WriteString(inputs[i])
+		if i < len(inputs)-1 {
+			builder.WriteRune(',')
+		}
+	}
+	builder.WriteRune(')')
+	return builder.String()
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func TreeDepth(g *gate) int {
+	return printDepth(g, 0)
+}
+
+func printDepth(g *gate, d int) int {
+	d = d + 1
+	if g.left != nil && g.right != nil {
+		return max(printDepth(g.left, d), printDepth(g.right, d))
+	} else if g.left != nil {
+		return printDepth(g.left, d)
+	} else if g.right != nil {
+		return printDepth(g.right, d)
+	}
+	return d
+}
+func CountMultiplicationGates(g *gate) int {
+	if g == nil {
+		return 0
+	}
+	if len(g.rightIns) > 0 || len(g.leftIns) > 0 {
+		return 1 + CountMultiplicationGates(g.left) + CountMultiplicationGates(g.right)
+	} else {
+		return CountMultiplicationGates(g.left) + CountMultiplicationGates(g.right)
+	}
+	return 0
+}
+
+//TODO avoid printing multiple times in case of loops
+func PrintTree(g *gate) {
+	printTree(g, 0)
+}
+func printTree(g *gate, d int) {
+	d += 1
+
+	if g.leftIns == nil || g.rightIns == nil {
+		fmt.Printf("Depth: %v - %s \t \t \t \t \n", d, g.value)
+	} else {
+		fmt.Printf("Depth: %v - %s \t \t \t \t with  l %v  and r %v\n", d, g.value, g.leftIns, g.rightIns)
+	}
+	if g.funcInputs != nil {
+		for _, v := range g.funcInputs {
+			printTree(v, d)
+		}
+	}
+
+	if g.left != nil {
+		printTree(g.left, d)
+	}
+	if g.right != nil {
+		printTree(g.right, d)
+	}
+}
+
+func addToMap(value string, in map[string]int, negate bool) {
+	if negate {
+		in[value] = in[value] - 1
+	} else {
+		in[value] = in[value] + 1
+	}
+}
+
+func collectAtomsInSubtree(g *gate, in map[string]int, functionRootMap map[string]*gate, negate bool, invert bool) {
+	if g == nil {
+		return
+	}
+	if g.OperationType()&(MULTIPLY|IN|CONST) != 0 {
+		addToMap(g.value.Out, in, negate)
+		return
+	}
+	if g.OperationType() == FUNC {
+		if b, name, _ := isFunction(g.value.Out); b {
+			collectAtomsInSubtree(functionRootMap[name], in, functionRootMap, negate, invert)
+		} else {
+			panic("function expected")
+		}
+
+	}
+
+	collectAtomsInSubtree(g.left, in, functionRootMap, negate, invert)
+	collectAtomsInSubtree(g.right, in, functionRootMap, Xor(negate, g.value.negate), invert)
+}
+
+func Xor(a, b bool) bool {
+	return (a && !b) || (!a && b)
+}
+
+func (g *gate) ExtractValues(in []int) (er error) {
+	if b, v1 := isValue(g.value.V1); b {
+		if b2, v2 := isValue(g.value.V2); b2 {
+			in = append(in, v1, v2)
+			return nil
+		}
+	}
+	return errors.New(fmt.Sprintf("Gate \"%s\" has no int values", g.value))
+}
+
+func (g *gate) OperationType() Token {
+	return g.value.Op
+}
+
+//returns index of e if its in arr
+//return -1 if e not in arr
 func indexInArray(arr []string, e string) int {
 	for i, a := range arr {
 		if a == e {
 			return i
 		}
 	}
+	panic("lul")
 	return -1
 }
 func isValue(a string) (bool, int) {
@@ -53,134 +339,23 @@ func isValue(a string) (bool, int) {
 	}
 	return true, v
 }
-func insertVar(arr []*big.Int, signals []string, v string, used map[string]bool) ([]*big.Int, map[string]bool) {
-	isVal, value := isValue(v)
-	valueBigInt := big.NewInt(int64(value))
-	if isVal {
-		arr[0] = new(big.Int).Add(arr[0], valueBigInt)
-	} else {
-		if !used[v] {
-			panic(errors.New("using variable before it's set"))
-		}
-		arr[indexInArray(signals, v)] = new(big.Int).Add(arr[indexInArray(signals, v)], big.NewInt(int64(1)))
+func isFunction(a string) (tf bool, name string, inputs []string) {
+
+	if !strings.ContainsRune(a, '(') && !strings.ContainsRune(a, ')') {
+		return false, "", nil
 	}
-	return arr, used
-}
-func insertVarNeg(arr []*big.Int, signals []string, v string, used map[string]bool) ([]*big.Int, map[string]bool) {
-	isVal, value := isValue(v)
-	valueBigInt := big.NewInt(int64(value))
-	if isVal {
-		arr[0] = new(big.Int).Add(arr[0], valueBigInt)
-	} else {
-		if !used[v] {
-			panic(errors.New("using variable before it's set"))
-		}
-		arr[indexInArray(signals, v)] = new(big.Int).Add(arr[indexInArray(signals, v)], big.NewInt(int64(-1)))
-	}
-	return arr, used
-}
+	name = strings.Split(a, "(")[0]
 
-// GenerateR1CS generates the R1CS polynomials from the Circuit
-func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
-	// from flat code to R1CS
+	// read string inside ( )
+	rgx := regexp.MustCompile(`\((.*?)\)`)
+	insideParenthesis := rgx.FindStringSubmatch(a)
+	varsString := strings.Replace(insideParenthesis[1], " ", "", -1)
+	inputs = strings.Split(varsString, ",")
 
-	var a [][]*big.Int
-	var b [][]*big.Int
-	var c [][]*big.Int
-
-	used := make(map[string]bool)
-	for _, constraint := range circ.Constraints {
-		aConstraint := r1csqap.ArrayOfBigZeros(len(circ.Signals))
-		bConstraint := r1csqap.ArrayOfBigZeros(len(circ.Signals))
-		cConstraint := r1csqap.ArrayOfBigZeros(len(circ.Signals))
-
-		// if existInArray(constraint.Out) {
-		// if used[constraint.Out] {
-		// panic(errors.New("out variable already used: " + constraint.Out))
-		// }
-		used[constraint.Out] = true
-		if constraint.Op == "in" {
-			for i := 0; i <= len(circ.PublicInputs); i++ {
-				aConstraint[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Add(aConstraint[indexInArray(circ.Signals, constraint.Out)], big.NewInt(int64(1)))
-				aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.Out, used)
-				bConstraint[0] = big.NewInt(int64(1))
-			}
-			continue
-
-		} else if constraint.Op == "+" {
-			cConstraint[indexInArray(circ.Signals, constraint.Out)] = big.NewInt(int64(1))
-			aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.V1, used)
-			aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.V2, used)
-			bConstraint[0] = big.NewInt(int64(1))
-		} else if constraint.Op == "-" {
-			cConstraint[indexInArray(circ.Signals, constraint.Out)] = big.NewInt(int64(1))
-			aConstraint, used = insertVarNeg(aConstraint, circ.Signals, constraint.V1, used)
-			aConstraint, used = insertVarNeg(aConstraint, circ.Signals, constraint.V2, used)
-			bConstraint[0] = big.NewInt(int64(1))
-		} else if constraint.Op == "*" {
-			cConstraint[indexInArray(circ.Signals, constraint.Out)] = big.NewInt(int64(1))
-			aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.V1, used)
-			bConstraint, used = insertVar(bConstraint, circ.Signals, constraint.V2, used)
-		} else if constraint.Op == "/" {
-			cConstraint, used = insertVar(cConstraint, circ.Signals, constraint.V1, used)
-			cConstraint[indexInArray(circ.Signals, constraint.Out)] = big.NewInt(int64(1))
-			bConstraint, used = insertVar(bConstraint, circ.Signals, constraint.V2, used)
-		}
-
-		a = append(a, aConstraint)
-		b = append(b, bConstraint)
-		c = append(c, cConstraint)
-
-	}
-	circ.R1CS.A = a
-	circ.R1CS.B = b
-	circ.R1CS.C = c
-	return a, b, c
-}
-
-func grabVar(signals []string, w []*big.Int, vStr string) *big.Int {
-	isVal, v := isValue(vStr)
-	vBig := big.NewInt(int64(v))
-	if isVal {
-		return vBig
-	} else {
-		return w[indexInArray(signals, vStr)]
-	}
+	return true, name, inputs
 }
 
 type Inputs struct {
 	Private []*big.Int
-	Public  []*big.Int
-}
-
-// CalculateWitness calculates the Witness of a Circuit based on the given inputs
-// witness = [ one, output, publicInputs, privateInputs, ...]
-func (circ *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*big.Int) ([]*big.Int, error) {
-	if len(privateInputs) != len(circ.PrivateInputs) {
-		return []*big.Int{}, errors.New("given privateInputs != circuit.PublicInputs")
-	}
-	if len(publicInputs) != len(circ.PublicInputs) {
-		return []*big.Int{}, errors.New("given publicInputs != circuit.PublicInputs")
-	}
-	w := r1csqap.ArrayOfBigZeros(len(circ.Signals))
-	w[0] = big.NewInt(int64(1))
-	for i, input := range publicInputs {
-		w[i+1] = input
-	}
-	for i, input := range privateInputs {
-		w[i+len(publicInputs)+1] = input
-	}
-	for _, constraint := range circ.Constraints {
-		if constraint.Op == "in" {
-		} else if constraint.Op == "+" {
-			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Add(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
-		} else if constraint.Op == "-" {
-			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Sub(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
-		} else if constraint.Op == "*" {
-			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Mul(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
-		} else if constraint.Op == "/" {
-			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Div(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
-		}
-	}
-	return w, nil
+	Publics []*big.Int
 }

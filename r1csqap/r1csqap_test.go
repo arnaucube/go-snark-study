@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/arnaucube/go-snark/fields"
+	"github.com/mottla/go-snark/fields"
 	"github.com/stretchr/testify/assert"
 )
 

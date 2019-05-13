@@ -7,25 +7,27 @@ zkSNARK library implementation in Go
 - `Pinocchio: Nearly practical verifiable computation`, Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova https://eprint.iacr.org/2013/279.pdf
 
 ## Caution, Warning
+UNDER CONSTRUCTION!
+
 Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) from scratch in Go to understand the concepts. Do not use in production.
 
-Not finished, implementing this in my free time to understand it better, so I don't have much time.
+This forked aims to extend its functionalities s.t. one can prove set-membership in zero knowledge. 
 
 Current implementation status:
 - [x] Finite Fields (1, 2, 6, 12) operations
 - [x] G1 and G2 curve operations
-- [x] BN128 Pairing
+- [x] BN128 Pairing (to be replaced with less unsecure curve)
 - [x] circuit code compiler
-	- [ ] code to flat code (improve circuit compiler)
+	- [ ] code to flat code (improve circuit compiler) (in progress)
 	- [x] flat code compiler
-- [x] circuit to R1CS
+- [x] circuit to R1CS with gate reduction optimisation 
 - [x] polynomial operations
 - [x] R1CS to QAP
 - [x] generate trusted setup
 - [x] generate proofs
 - [x] verify proofs with BN128 pairing
-- [ ] move witness calculation outside the setup phase
-- [ ] Groth16
+- [x] move witness calculation outside the setup phase 
+- [ ] Groth16 (in progress)
 - [ ] multiple optimizations
 
 

@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/arnaucube/go-snark/bn128"
-	"github.com/arnaucube/go-snark/circuitcompiler"
-	"github.com/arnaucube/go-snark/fields"
-	"github.com/arnaucube/go-snark/r1csqap"
+	"github.com/mottla/go-snark/bn128"
+	"github.com/mottla/go-snark/circuitcompiler"
+	"github.com/mottla/go-snark/fields"
+	"github.com/mottla/go-snark/r1csqap"
 )
 
 // Setup is the data structure holding the Trusted Setup data. The Setup.Toxic sub struct must be destroyed after the GenerateTrustedSetup function is completed
