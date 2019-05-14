@@ -109,13 +109,15 @@ func (circ *Circuit) addConstraint(constraint *Constraint) {
 			//the main functions output must be a multiplication gate
 			//if its not, then we simple create one where outNew = 1 * outOld
 			if constraint.Op&(MINUS|PLUS) != 0 {
-				newOut := &Constraint{Out: constraint.Out, V1: "one", V2: "out2", Op: MULTIPLY}
+				newOut := &Constraint{Out: constraint.Out, V1: "1", V2: "out2", Op: MULTIPLY}
+				//TODO reachable?
 				delete(circ.constraintMap, constraint.Out)
 				circ.addConstraint(newOut)
 				constraint.Out = "out2"
 				circ.addConstraint(constraint)
 			}
 		}
+
 	}
 
 	addConstantsAndFunctions := func(constraint string) {
@@ -272,35 +274,6 @@ func printTree(g *gate, d int) {
 	if g.right != nil {
 		printTree(g.right, d)
 	}
-}
-
-func addToMap(value string, in map[string]int, negate bool) {
-	if negate {
-		in[value] = in[value] - 1
-	} else {
-		in[value] = in[value] + 1
-	}
-}
-
-func collectAtomsInSubtree(g *gate, in map[string]int, functionRootMap map[string]*gate, negate bool, invert bool) {
-	if g == nil {
-		return
-	}
-	if g.OperationType()&(MULTIPLY|IN|CONST) != 0 {
-		addToMap(g.value.Out, in, negate)
-		return
-	}
-	if g.OperationType() == FUNC {
-		if b, name, _ := isFunction(g.value.Out); b {
-			collectAtomsInSubtree(functionRootMap[name], in, functionRootMap, negate, invert)
-		} else {
-			panic("function expected")
-		}
-
-	}
-
-	collectAtomsInSubtree(g.left, in, functionRootMap, negate, invert)
-	collectAtomsInSubtree(g.right, in, functionRootMap, Xor(negate, g.value.negate), invert)
 }
 
 func Xor(a, b bool) bool {

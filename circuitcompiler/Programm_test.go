@@ -17,29 +17,30 @@ func TestNewProgramm(t *testing.T) {
 
 	flat := `
 	func do(x):
-		e = x * x
-		b = e * e
-		c = b * b
-		d = c * c
+		e = x * 5
+		b = e * 6
+		c = b * 7
+		f = c * 1
+		d = c / f
 		out = d * 1
 	
 	func add(x ,k):
 		z = k * x
 		out = do(x) + mul(x,z)
 	
-	func main(a,b):
-		out = do(5) + 4
+	func main(x,z):	
+		out = do(x) + 4
 	
 	func mul(a,b):
 		out = a * b
 	`
 
 	//flat := `
-	//func do(x):
-	//	b = x - 2
-	//	out = x * b
 	//func main(a,b):
-	//	out = do(a) + 4
+	//	e = 4 * a
+	//	c = a * e
+	//	d = c * 70
+	//	out = a * d
 	//`
 	parser := NewParser(strings.NewReader(flat))
 	program, err := parser.Parse()

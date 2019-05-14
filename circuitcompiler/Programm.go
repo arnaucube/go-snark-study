@@ -28,7 +28,7 @@ func (p *Program) BuildConstraintTrees() {
 
 	functionRootMap := make(map[string]*gate)
 	for _, circuit := range p.functions {
-		circuit.addConstraint(p.oneConstraint())
+		//circuit.addConstraint(p.oneConstraint())
 		fName := composeNewFunction(circuit.Name, circuit.Inputs)
 		root := &gate{value: circuit.constraintMap[fName]}
 		functionRootMap[fName] = root
@@ -123,19 +123,20 @@ func traverseCombinedMultiplicationGates(root *gate, mGatesUsed map[string]bool,
 	//if root == nil {
 	//	return
 	//}
+	//fmt.Printf("\n%p",mGatesUsed)
 	if root.OperationType() == FUNC {
 		//if a input has already been built, we let this subroutine know
-		newMap := make(map[string]bool)
+		//newMap := make(map[string]bool)
 		for _, in := range root.funcInputs {
 
 			if _, ex := mGatesUsed[in.value.Out]; ex {
-				newMap[in.value.Out] = true
+				//newMap[in.value.Out] = true
 			} else {
 				traverseCombinedMultiplicationGates(in, mGatesUsed, orderedmGates, functionRootMap, functionRenamer, negate, inverse)
 			}
 		}
 		//mGatesUsed[root.value.Out] = true
-		traverseCombinedMultiplicationGates(functionRenamer(root.value), newMap, orderedmGates, functionRootMap, functionRenamer, negate, inverse)
+		traverseCombinedMultiplicationGates(functionRenamer(root.value), mGatesUsed, orderedmGates, functionRootMap, functionRenamer, negate, inverse)
 	} else {
 		if _, alreadyComputed := mGatesUsed[root.value.V1]; !alreadyComputed && root.OperationType()&(IN|CONST) == 0 {
 			traverseCombinedMultiplicationGates(root.left, mGatesUsed, orderedmGates, functionRootMap, functionRenamer, negate, inverse)
@@ -148,17 +149,86 @@ func traverseCombinedMultiplicationGates(root *gate, mGatesUsed map[string]bool,
 
 	if root.OperationType() == MULTIPLY {
 
+		_, n, _ := isFunction(root.value.Out)
+		if (root.left.OperationType()|root.right.OperationType())&CONST != 0 && n != "main" {
+			return
+		}
+
 		root.leftIns = make(map[string]int)
-		collectAtomsInSubtree(root.left, root.leftIns, functionRootMap, negate, inverse)
+		collectAtomsInSubtree(root.left, mGatesUsed, 1, root.leftIns, functionRootMap, negate, inverse)
 		root.rightIns = make(map[string]int)
-		collectAtomsInSubtree(root.right, root.rightIns, functionRootMap, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
+		//if root.left.value.Out== root.right.value.Out{
+		//	//note this is not a full copy, but shouldnt be a problem
+		//	root.rightIns= root.leftIns
+		//}else{
+		//	collectAtomsInSubtree(root.right, mGatesUsed, 1, root.rightIns, functionRootMap, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
+		//}
+		collectAtomsInSubtree(root.right, mGatesUsed, 1, root.rightIns, functionRootMap, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
 		root.index = len(mGatesUsed)
 		mGatesUsed[root.value.Out] = true
+
 		rootGate := cloneGate(root)
 		*orderedmGates = append(*orderedmGates, *rootGate)
 	}
 
 	//TODO optimize if output is not a multipication gate
+}
+
+func collectAtomsInSubtree(g *gate, mGatesUsed map[string]bool, multiplicative int, in map[string]int, functionRootMap map[string]*gate, negate bool, invert bool) {
+	if g == nil {
+		return
+	}
+	if _, ex := mGatesUsed[g.value.Out]; ex {
+		addToMap(g.value.Out, multiplicative, in, negate)
+		return
+	}
+
+	if g.OperationType()&(IN|CONST) != 0 {
+		addToMap(g.value.Out, multiplicative, in, negate)
+		return
+	}
+
+	if g.OperationType()&(MULTIPLY) != 0 {
+		b1, v1 := isValue(g.value.V1)
+		b2, v2 := isValue(g.value.V2)
+
+		if b1 && !b2 {
+			multiplicative *= v1
+			collectAtomsInSubtree(g.right, mGatesUsed, multiplicative, in, functionRootMap, Xor(negate, g.value.negate), invert)
+			return
+		} else if !b1 && b2 {
+			multiplicative *= v2
+			collectAtomsInSubtree(g.left, mGatesUsed, multiplicative, in, functionRootMap, negate, invert)
+			return
+		} else if b1 && b2 {
+			panic("multiply constants not supported yet")
+		} else {
+			panic("werird")
+		}
+	}
+	if g.OperationType() == FUNC {
+		if b, name, _ := isFunction(g.value.Out); b {
+			collectAtomsInSubtree(functionRootMap[name], mGatesUsed, multiplicative, in, functionRootMap, negate, invert)
+
+		} else {
+			panic("function expected")
+		}
+
+	}
+	collectAtomsInSubtree(g.left, mGatesUsed, multiplicative, in, functionRootMap, negate, invert)
+	collectAtomsInSubtree(g.right, mGatesUsed, multiplicative, in, functionRootMap, Xor(negate, g.value.negate), invert)
+
+}
+
+func addOneToMap(value string, in map[string]int, negate bool) {
+	addToMap(value, 1, in, negate)
+}
+func addToMap(value string, val int, in map[string]int, negate bool) {
+	if negate {
+		in[value] = (in[value] - 1) * val
+	} else {
+		in[value] = (in[value] + 1) * val
+	}
 }
 
 //copies a gate neglecting its references to other gates
@@ -184,15 +254,16 @@ func (p *Program) addGlobalInput(c *Constraint) {
 }
 
 func NewProgramm() *Program {
-	return &Program{functions: map[string]*Circuit{}, signals: []string{}, globalInputs: []*Constraint{{Op: CONST, Out: "one"}}}
+	//return &Program{functions: map[string]*Circuit{}, signals: []string{}, globalInputs: []*Constraint{{Op: PLUS, V1:"1",V2:"0", Out: "one"}}}
+	return &Program{functions: map[string]*Circuit{}, signals: []string{}, globalInputs: []*Constraint{{Op: IN, Out: "one"}}}
 }
 
-func (p *Program) oneConstraint() *Constraint {
-	if p.globalInputs[0].Out != "one" {
-		panic("'one' should be first global input")
-	}
-	return p.globalInputs[0]
-}
+//func (p *Program) oneConstraint() *Constraint {
+//	if p.globalInputs[0].Out != "one" {
+//		panic("'one' should be first global input")
+//	}
+//	return p.globalInputs[0]
+//}
 
 func (p *Program) addSignal(name string) {
 	p.signals = append(p.signals, name)
@@ -262,7 +333,25 @@ func (p *Program) GenerateReducedR1CS(mGates []gate) (a, b, c [][]*big.Int) {
 			bConstraint := r1csqap.ArrayOfBigZeros(size)
 			cConstraint := r1csqap.ArrayOfBigZeros(size)
 
+			//if len(gate.leftIns)>=len(gate.rightIns){
+			//	for leftInput, _ := range gate.leftIns {
+			//		if v, ex := gate.rightIns[leftInput]; ex {
+			//			gate.leftIns[leftInput] *= v
+			//			gate.rightIns[leftInput] = 1
+			//
+			//		}
+			//	}
+			//}else{
+			//	for rightInput, _ := range gate.rightIns {
+			//		if v, ex := gate.leftIns[rightInput]; ex {
+			//			gate.rightIns[rightInput] *= v
+			//			gate.leftIns[rightInput] = 1
+			//		}
+			//	}
+			//}
+
 			for leftInput, val := range gate.leftIns {
+
 				insertVar3(aConstraint, val, leftInput, indexMap[leftInput])
 			}
 			for rightInput, val := range gate.rightIns {

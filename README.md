@@ -11,7 +11,7 @@ UNDER CONSTRUCTION!
 
 Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) from scratch in Go to understand the concepts. Do not use in production.
 
-This forked aims to extend its functionalities s.t. one can prove set-membership in zero knowledge. 
+This fork aims to extend its functionalities s.t. one can prove set-membership in zero knowledge. 
 
 Current implementation status:
 - [x] Finite Fields (1, 2, 6, 12) operations

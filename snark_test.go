@@ -3,7 +3,6 @@ package snark
 import (
 	"fmt"
 	"github.com/mottla/go-snark/circuitcompiler"
-	"github.com/mottla/go-snark/r1csqap"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"strings"
@@ -13,16 +12,10 @@ import (
 func TestNewProgramm(t *testing.T) {
 
 	flat := `
-
-	func add(x ,k):
-		z = k * x
-		out = x + mul(x,z)
-	
-	func main(a,b):
-		out = add(a,b) * a
-
-	func mul(a,b):
-		out = a * b	
+	func main(a,b,c,d):
+		e = a + b
+		f = c * d
+		out = e * f
 	`
 
 	parser := circuitcompiler.NewParser(strings.NewReader(flat))
@@ -35,7 +28,7 @@ func TestNewProgramm(t *testing.T) {
 	fmt.Println(flat)
 
 	program.BuildConstraintTrees()
-	program.PrintConstraintTrees()
+	program.PrintContraintTrees()
 	fmt.Println("\nReduced gates")
 	//PrintTree(froots["mul"])
 	gates := program.ReduceCombinedTree()
@@ -50,7 +43,7 @@ func TestNewProgramm(t *testing.T) {
 	fmt.Println(c)
 	a1 := big.NewInt(int64(6))
 	a2 := big.NewInt(int64(5))
-	inputs := []*big.Int{a1, a2}
+	inputs := []*big.Int{a1, a2, a1, a2}
 	w := program.CalculateWitness(inputs)
 	fmt.Println("witness")
 	fmt.Println(w)
@@ -82,9 +75,9 @@ func TestNewProgramm(t *testing.T) {
 	hzQAP := Utils.PF.Mul(hxQAP, zxQAP)
 	assert.Equal(t, abc, hzQAP)
 
-	div, rem := Utils.PF.Div(px, zxQAP)
-	assert.Equal(t, hxQAP, div)
-	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
+	//div, rem := Utils.PF.Div(px, zxQAP)
+	//assert.Equal(t, hxQAP, div)
+	//assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
 
 	// calculate trusted setup
 	//setup, err := GenerateTrustedSetup(len(w), *circuit, alphas, betas, gammas)

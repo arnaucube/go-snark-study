@@ -2,6 +2,7 @@ package r1csqap
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 
 	"github.com/mottla/go-snark/fields"
@@ -162,6 +163,9 @@ func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*bi
 	aT := Transpose(a)
 	bT := Transpose(b)
 	cT := Transpose(c)
+	fmt.Println(aT)
+	fmt.Println(bT)
+	fmt.Println(cT)
 	var alphas [][]*big.Int
 	for i := 0; i < len(aT); i++ {
 		alphas = append(alphas, pf.LagrangeInterpolation(aT[i]))
