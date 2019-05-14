@@ -11,6 +11,17 @@ Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/
 
 Not finished, implementing this in my free time to understand it better, so I don't have much time.
 
+Currently allows to do the complete path with [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) :
+- compile circuuit
+	- parsers
+	- R1CS
+	- QAP
+- generate trusted setup
+- calculate witness
+- generate proofs
+- verify proofs
+	- with BN128 pairing
+
 Current implementation status:
 - [x] Finite Fields (1, 2, 6, 12) operations
 - [x] G1 and G2 curve operations
@@ -164,6 +175,9 @@ assert.True(t, VerifyProof(*circuit, setup, proof, publicSignalsVerif, true))
 ```
 go test ./... -v
 ```
+
+## vim/nvim circuit syntax highlighter
+For more details and installation instructions see https://github.com/arnaucube/go-snark/tree/master/vim-syntax
 
 ---
 

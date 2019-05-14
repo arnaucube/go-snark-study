@@ -1,0 +1,8 @@
+func test(private s0, public s1):
+	s2 = s0 * s0
+	s3 = s2 * s0
+	s4 = s3 + s0
+	s5 = s4 + 5
+	equals(s1, s5)
+	out = 1 * 1
+

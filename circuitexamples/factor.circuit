@@ -1,0 +1,4 @@
+func test(private a, private b, public c):
+	d = a * b
+	equals(c, d)
+	out = 1 * 1
