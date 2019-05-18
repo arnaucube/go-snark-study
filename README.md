@@ -6,36 +6,35 @@ zkSNARK library implementation in Go
 - `Succinct Non-Interactive Zero Knowledge for a von Neumann Architecture`, Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza https://eprint.iacr.org/2013/879.pdf
 - `Pinocchio: Nearly practical verifiable computation`, Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova https://eprint.iacr.org/2013/279.pdf
 
-## Caution, Warning
+## Caution & Warning
 Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) from scratch in Go to understand the concepts. Do not use in production.
 
 Not finished, implementing this in my free time to understand it better, so I don't have much time.
 
 Currently allows to do the complete path with [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) :
-- compile circuuit
-	- parsers
-	- R1CS
-	- QAP
-- generate trusted setup
-- calculate witness
-- generate proofs
-- verify proofs
-	- with BN128 pairing
+1. compile circuuit
+2. generate trusted setup
+3. calculate witness
+4. generate proofs
+5. verify proofs
 
-Current implementation status:
+Minimal complete flow implementation:
 - [x] Finite Fields (1, 2, 6, 12) operations
 - [x] G1 and G2 curve operations
 - [x] BN128 Pairing
-- [x] circuit code compiler
-	- [ ] code to flat code (improve circuit compiler)
-	- [x] flat code compiler
+- [x] circuit flat code compiler
 - [x] circuit to R1CS
 - [x] polynomial operations
 - [x] R1CS to QAP
 - [x] generate trusted setup
 - [x] generate proofs
 - [x] verify proofs with BN128 pairing
-- [ ] move witness calculation outside the setup phase
+
+Improvements from the minimal implementation:
+- [ ] allow `import` in circuits language
+- [ ] allow `for` in circuits language
+- [ ] code to flat code (improve circuit compiler)
+- [ ] move witness values calculation outside the setup phase
 - [ ] Groth16
 - [ ] multiple optimizations
 
@@ -48,6 +47,9 @@ Current implementation status:
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler) Circuit Compiler
 
 ### CLI usage
+*The cli still needs some improvements, such as seting input files, etc.*
+
+In this example we will follow the equation example from [Vitalik](https://medium.com/@VitalikButerin/quadratic-arithmetic-programs-from-zero-to-hero-f6d558cea649)'s article: `y = x^3 + x + 5`, where `y==35` and `x==3`. So we want to prove that we know a secret `x` such as the result of the equation is `35`.
 
 #### Compile circuit
 Having a circuit file `test.circuit`:
@@ -105,7 +107,6 @@ This will return a `true` if the proofs are verified, or a `false` if the proofs
 
 
 ### Library usage
-Warning: not finished.
 
 Example:
 ```go
