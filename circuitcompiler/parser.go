@@ -154,7 +154,7 @@ func (p *Parser) Parse() (programm *Program, err error) {
 		if constraint.Op == FUNC {
 			circuit = programm.addFunction(constraint)
 		} else {
-			circuit.addConstraint(constraint)
+			circuit.addConstraint(*constraint)
 		}
 	}
 	//TODO

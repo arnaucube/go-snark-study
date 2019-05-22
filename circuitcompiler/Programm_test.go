@@ -21,26 +21,36 @@ func TestNewProgramm(t *testing.T) {
 		b = e * 6
 		c = b * 7
 		f = c * 1
-		d = c / f
-		out = d * 1
+		d = c * f
+		out = d * mul(d,e)
 	
 	func add(x ,k):
 		z = k * x
 		out = do(x) + mul(x,z)
 	
-	func main(x,z):	
-		out = do(x) + 4
+	func main(x,z):
+		out = do(z) + add(x,x)
 	
 	func mul(a,b):
 		out = a * b
 	`
-
+	//flat := `
+	//func mul(a,b):
+	//	out = a * b
+	//
+	//func main(a):
+	//	b = a * a
+	//	c = 4 - b
+	//	d = 5 * c
+	//	out = d / mul(b,b)
+	//`
 	//flat := `
 	//func main(a,b):
-	//	e = 4 * a
-	//	c = a * e
-	//	d = c * 70
-	//	out = a * d
+	//	c = a + b
+	//	e = c - a
+	//	f = e + b
+	//	g = f + 2
+	//	out = g * a
 	//`
 	parser := NewParser(strings.NewReader(flat))
 	program, err := parser.Parse()
@@ -61,7 +71,7 @@ func TestNewProgramm(t *testing.T) {
 	//PrintTree(froots["mul"])
 	gates := program.ReduceCombinedTree()
 	for _, g := range gates {
-		fmt.Println(g)
+		fmt.Printf("\n %v", g)
 	}
 
 	fmt.Println("generating R1CS")

@@ -3,19 +3,67 @@ package snark
 import (
 	"fmt"
 	"github.com/mottla/go-snark/circuitcompiler"
+	"github.com/mottla/go-snark/r1csqap"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"strings"
 	"testing"
 )
 
+func TestGenerateProofs(t *testing.T) {
+	z := []*big.Int{big.NewInt(int64(1))}
+	for i := 1; i < 6; i++ {
+		z = Utils.PF.Mul(
+			z,
+			[]*big.Int{
+				Utils.PF.F.Neg(
+					big.NewInt(int64(i))),
+				big.NewInt(int64(1)),
+			})
+	}
+	fmt.Println(z)
+	for i := 0; i < 7; i++ {
+		fmt.Println(Utils.PF.Eval(z, big.NewInt(int64(i))))
+	}
+
+	z = []*big.Int{big.NewInt(int64(1))}
+	for i := 1; i < 6; i++ {
+		z = Utils.PF.Mul(
+			z,
+			[]*big.Int{
+				big.NewInt(int64(i)),
+				big.NewInt(int64(1)),
+			})
+
+	}
+	fmt.Println(z)
+	z = []*big.Int{
+		big.NewInt(int64(1)),
+		big.NewInt(int64(
+			-3)),
+	}
+	z = Utils.PF.Mul(
+		z,
+		[]*big.Int{
+			big.NewInt(int64(1)),
+			big.NewInt(int64(3)),
+		})
+	fmt.Println(z)
+	fmt.Println(Utils.PF.F.Neg(
+		big.NewInt(int64(1))))
+	fmt.Println(Utils.PF.F.Inverse(big.NewInt(int64(1))))
+}
+
 func TestNewProgramm(t *testing.T) {
 
 	flat := `
 	func main(a,b,c,d):
-		e = a + b
+		e = a * b
 		f = c * d
-		out = e * f
+		g = e * f
+		h = g / e
+		i = h * 5
+		out = g * i
 	`
 
 	parser := circuitcompiler.NewParser(strings.NewReader(flat))
@@ -49,13 +97,13 @@ func TestNewProgramm(t *testing.T) {
 	fmt.Println(w)
 
 	// R1CS to QAP
-	alphas, betas, gammas, zxQAP := Utils.PF.R1CSToQAP(a, b, c)
+	alphas, betas, gammas, domain := Utils.PF.R1CSToQAP(a, b, c)
 	fmt.Println("qap")
 	fmt.Println("alphas", len(alphas))
 	fmt.Println("alphas", alphas)
 	fmt.Println("betas", len(betas))
 	fmt.Println("gammas", len(gammas))
-	fmt.Println("zx length", len(zxQAP))
+	fmt.Println("domain polynomial ", len(domain))
 
 	ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
 	fmt.Println("ax length", len(ax))
@@ -63,29 +111,29 @@ func TestNewProgramm(t *testing.T) {
 	fmt.Println("cx length", len(cx))
 	fmt.Println("px length", len(px))
 
-	hxQAP := Utils.PF.DivisorPolynomial(px, zxQAP)
-	fmt.Println("hx length", len(hxQAP))
+	hxQAP := Utils.PF.DivisorPolynomial(px, domain)
+	fmt.Println("hx length", hxQAP)
 
 	// hx==px/zx so px==hx*zx
-	assert.Equal(t, px, Utils.PF.Mul(hxQAP, zxQAP))
+	assert.Equal(t, px, Utils.PF.Mul(hxQAP, domain))
 
 	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
 	abc := Utils.PF.Sub(Utils.PF.Mul(ax, bx), cx)
 	assert.Equal(t, abc, px)
-	hzQAP := Utils.PF.Mul(hxQAP, zxQAP)
+	hzQAP := Utils.PF.Mul(hxQAP, domain)
 	assert.Equal(t, abc, hzQAP)
 
-	//div, rem := Utils.PF.Div(px, zxQAP)
-	//assert.Equal(t, hxQAP, div)
-	//assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
+	div, rem := Utils.PF.Div(px, domain)
+	assert.Equal(t, hxQAP, div) //not necessary
+	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(len(px)-len(domain)))
 
-	// calculate trusted setup
-	//setup, err := GenerateTrustedSetup(len(w), *circuit, alphas, betas, gammas)
+	//calculate trusted setup
+	//setup, err := GenerateTrustedSetup(len(w),alphas, betas, gammas)
 	//assert.Nil(t, err)
 	//fmt.Println("\nt:", setup.Toxic.T)
-	//
-	//// zx and setup.Pk.Z should be the same (currently not, the correct one is the calculation used inside GenerateTrustedSetup function), the calculation is repeated. TODO avoid repeating calculation
-	//// assert.Equal(t, zxQAP, setup.Pk.Z)
+	////
+	////// zx and setup.Pk.Z should be the same (currently not, the correct one is the calculation used inside GenerateTrustedSetup function), the calculation is repeated. TODO avoid repeating calculation
+	//assert.Equal(t, domain, setup.Pk.Z)
 	//
 	//fmt.Println("hx pk.z", hxQAP)
 	//hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z)

@@ -11,23 +11,12 @@ import (
 
 // Circuit is the data structure of the compiled circuit
 type Circuit struct {
-	NVars         int
-	NPublic       int
-	NSignals      int
-	Inputs        []string
-	Signals       []string
-	PublicSignals []string
-	Witness       []*big.Int
-	Name          string
-	root          *gate
+	Inputs []string
+	Name   string
+	root   *gate
 	//after reducing
-	constraintMap map[string]*Constraint
-	//used          map[string]bool
-	R1CS struct {
-		A [][]*big.Int
-		B [][]*big.Int
-		C [][]*big.Int
-	}
+	//constraintMap map[string]*Constraint
+	gateMap map[string]*gate
 }
 
 type gate struct {
@@ -35,9 +24,9 @@ type gate struct {
 	left       *gate
 	right      *gate
 	funcInputs []*gate
-	value      *Constraint
-	leftIns    map[string]int //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
-	rightIns   map[string]int
+	value      Constraint //is a pointer a good thing here??
+	leftIns    []factor   //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
+	rightIns   []factor
 }
 
 func (g gate) String() string {
@@ -73,24 +62,11 @@ func (c Constraint) String() string {
 }
 
 func newCircuit(name string) *Circuit {
-	return &Circuit{Name: name, constraintMap: make(map[string]*Constraint)}
+	return &Circuit{Name: name, gateMap: make(map[string]*gate)}
 }
 
-func (g *gate) addLeft(c *Constraint) {
-	if g.left != nil {
-		panic("already set left gate")
-	}
-	g.left = &gate{value: c}
-}
-func (g *gate) addRight(c *Constraint) {
-	if g.right != nil {
-		panic("already set left gate")
-	}
-	g.right = &gate{value: c}
-}
-
-func (circ *Circuit) addConstraint(constraint *Constraint) {
-	if _, ex := circ.constraintMap[constraint.Out]; ex {
+func (circ *Circuit) addConstraint(constraint Constraint) {
+	if _, ex := circ.gateMap[constraint.Out]; ex {
 		panic("already used FlatConstraint")
 	}
 
@@ -109,36 +85,43 @@ func (circ *Circuit) addConstraint(constraint *Constraint) {
 			//the main functions output must be a multiplication gate
 			//if its not, then we simple create one where outNew = 1 * outOld
 			if constraint.Op&(MINUS|PLUS) != 0 {
-				newOut := &Constraint{Out: constraint.Out, V1: "1", V2: "out2", Op: MULTIPLY}
+				newOut := Constraint{Out: constraint.Out, V1: "1", V2: "out2", Op: MULTIPLY}
 				//TODO reachable?
-				delete(circ.constraintMap, constraint.Out)
+				delete(circ.gateMap, constraint.Out)
 				circ.addConstraint(newOut)
 				constraint.Out = "out2"
 				circ.addConstraint(constraint)
 			}
 		}
-
 	}
 
 	addConstantsAndFunctions := func(constraint string) {
 		if b, _ := isValue(constraint); b {
-			circ.constraintMap[constraint] = &Constraint{Op: CONST, Out: constraint}
+			circ.gateMap[constraint] = &gate{value: Constraint{Op: CONST, Out: constraint}}
 		} else if b, _, inputs := isFunction(constraint); b {
 
 			//check if function input is a constant like foo(a,4)
 			for _, in := range inputs {
 				if b, _ := isValue(in); b {
-					circ.constraintMap[in] = &Constraint{Op: CONST, Out: in}
+					circ.gateMap[in] = &gate{value: Constraint{Op: CONST, Out: in}}
+					continue
 				}
+				//if the argument is not in the constraint map, we panic. I used to do this later, but since we have a line
+				//interpreter, we can do this here
+				//the downside is that there cannot be functions passed as arguments
+				//if _, ex := circ.constraintMap[in];!ex {
+				//	panic("undefined argument")
+				//
+				//}
 			}
-			circ.constraintMap[constraint] = &Constraint{Op: FUNC, Out: constraint, Inputs: inputs}
+			circ.gateMap[constraint] = &gate{value: Constraint{Op: FUNC, Out: constraint, Inputs: inputs}}
 		}
 	}
 
 	addConstantsAndFunctions(constraint.V1)
 	addConstantsAndFunctions(constraint.V2)
 
-	circ.constraintMap[constraint.Out] = constraint
+	circ.gateMap[constraint.Out] = &gate{value: constraint}
 }
 
 func (circ *Circuit) renameInputs(inputs []string) {
@@ -147,12 +130,12 @@ func (circ *Circuit) renameInputs(inputs []string) {
 	}
 	mapping := make(map[string]string)
 	for i := 0; i < len(inputs); i++ {
-		if _, ex := circ.constraintMap[inputs[i]]; ex {
+		if _, ex := circ.gateMap[inputs[i]]; ex {
 
 			//this is a tricky part. So we replace former inputs with the new ones, thereby
 			//it might be, that the new input name has already been used for some output inside the function
 			//currently I dont know an elegant way how to handle this renaming issue
-			if circ.constraintMap[inputs[i]].Op != IN {
+			if circ.gateMap[inputs[i]].value.Op != IN {
 				panic(fmt.Sprintf("renaming collsion with %s", inputs[i]))
 			}
 
@@ -160,7 +143,7 @@ func (circ *Circuit) renameInputs(inputs []string) {
 		mapping[circ.Inputs[i]] = inputs[i]
 	}
 	//fmt.Println(mapping)
-	circ.Inputs = inputs
+	//circ.Inputs = inputs
 	permute := func(in string) string {
 		if out, ex := mapping[in]; ex {
 			return out
@@ -175,28 +158,28 @@ func (circ *Circuit) renameInputs(inputs []string) {
 		return in
 	}
 
-	for _, constraint := range circ.constraintMap {
+	for _, constraint := range circ.gateMap {
 
-		if constraint.Op == IN {
-			constraint.Out = permute(constraint.Out)
+		if constraint.value.Op == IN {
+			constraint.value.Out = permute(constraint.value.Out)
 			continue
 		}
 
-		if b, n, in := isFunction(constraint.Out); b {
-			constraint.Out = composeNewFunction(n, permuteListe(in))
-			constraint.Inputs = permuteListe(in)
+		if b, n, in := isFunction(constraint.value.Out); b {
+			constraint.value.Out = composeNewFunction(n, permuteListe(in))
+			constraint.value.Inputs = permuteListe(in)
 		}
-		if b, n, in := isFunction(constraint.V1); b {
-			constraint.V1 = composeNewFunction(n, permuteListe(in))
-			constraint.Inputs = permuteListe(in)
+		if b, n, in := isFunction(constraint.value.V1); b {
+			constraint.value.V1 = composeNewFunction(n, permuteListe(in))
+			constraint.value.Inputs = permuteListe(in)
 		}
-		if b, n, in := isFunction(constraint.V2); b {
-			constraint.V2 = composeNewFunction(n, permuteListe(in))
-			constraint.Inputs = permuteListe(in)
+		if b, n, in := isFunction(constraint.value.V2); b {
+			constraint.value.V2 = composeNewFunction(n, permuteListe(in))
+			constraint.value.Inputs = permuteListe(in)
 		}
 
-		constraint.V1 = permute(constraint.V1)
-		constraint.V2 = permute(constraint.V2)
+		constraint.value.V1 = permute(constraint.value.V1)
+		constraint.value.V2 = permute(constraint.value.V2)
 
 	}
 	return

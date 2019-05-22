@@ -128,18 +128,22 @@ func (pf PolynomialField) Eval(v []*big.Int, x *big.Int) *big.Int {
 
 // NewPolZeroAt generates a new polynomial that has value zero at the given value
 func (pf PolynomialField) NewPolZeroAt(pointPos, totalPoints int, height *big.Int) []*big.Int {
+	//todo note that this will blow up. big may be necessary
 	fac := 1
+	//(xj-x0)(xj-x1)..(xj-x_j-1)(xj-x_j+1)..(x_j-x_k)
 	for i := 1; i < totalPoints+1; i++ {
 		if i != pointPos {
 			fac = fac * (pointPos - i)
 		}
 	}
+
 	facBig := big.NewInt(int64(fac))
 	hf := pf.F.Div(height, facBig)
 	r := []*big.Int{hf}
 	for i := 1; i < totalPoints+1; i++ {
 		if i != pointPos {
 			ineg := big.NewInt(int64(-i))
+			//is b1 necessary?
 			b1 := big.NewInt(int64(1))
 			r = pf.Mul(r, []*big.Int{ineg, b1})
 		}
@@ -153,33 +157,40 @@ func (pf PolynomialField) LagrangeInterpolation(v []*big.Int) []*big.Int {
 	var r []*big.Int
 	for i := 0; i < len(v); i++ {
 		r = pf.Add(r, pf.NewPolZeroAt(i+1, len(v), v[i]))
+		//r = pf.Mul(v[i], pf.NewPolZeroAt(i+1, len(v), v[i]))
 	}
 	//
 	return r
 }
 
 // R1CSToQAP converts the R1CS values to the QAP values
-func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*big.Int, [][]*big.Int, []*big.Int) {
+//it uses Lagrange interpolation to to fit a polynomial through each slice. The x coordinate
+//is simply a linear increment starting at 1
+//within this process, the polynomial is evaluated at position 0
+//so an alpha/beta/gamma value is the polynomial evaluated at 0
+// the domain polynomial therefor is (-1+x)(-2+x)...(-n+x)
+func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) (alphas [][]*big.Int, betas [][]*big.Int, gammas [][]*big.Int, domain []*big.Int) {
 	aT := Transpose(a)
 	bT := Transpose(b)
 	cT := Transpose(c)
 	fmt.Println(aT)
 	fmt.Println(bT)
 	fmt.Println(cT)
-	var alphas [][]*big.Int
+
 	for i := 0; i < len(aT); i++ {
 		alphas = append(alphas, pf.LagrangeInterpolation(aT[i]))
 	}
-	var betas [][]*big.Int
+
 	for i := 0; i < len(bT); i++ {
 		betas = append(betas, pf.LagrangeInterpolation(bT[i]))
 	}
-	var gammas [][]*big.Int
+
 	for i := 0; i < len(cT); i++ {
 		gammas = append(gammas, pf.LagrangeInterpolation(cT[i]))
 	}
+	//it used to range till len(alphas)-1, but this was wrong.
 	z := []*big.Int{big.NewInt(int64(1))}
-	for i := 1; i < len(alphas)-1; i++ {
+	for i := 1; i < len(a); i++ {
 		z = pf.Mul(
 			z,
 			[]*big.Int{
