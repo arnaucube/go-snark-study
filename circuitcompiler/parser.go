@@ -142,7 +142,7 @@ func addToArrayIfNotExist(arr []string, elem string) []string {
 
 // Parse parses the lines and returns the compiled Circuit
 func (p *Parser) Parse() (programm *Program, err error) {
-	programm = NewProgramm()
+	programm = NewProgram()
 
 	var circuit *Circuit
 
@@ -154,7 +154,7 @@ func (p *Parser) Parse() (programm *Program, err error) {
 		if constraint.Op == FUNC {
 			circuit = programm.addFunction(constraint)
 		} else {
-			circuit.addConstraint(*constraint)
+			circuit.addConstraint(constraint)
 		}
 	}
 	//TODO

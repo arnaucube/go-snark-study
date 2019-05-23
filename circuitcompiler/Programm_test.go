@@ -15,35 +15,35 @@ func TestProgramm_BuildConstraintTree(t *testing.T) {
 
 func TestNewProgramm(t *testing.T) {
 
-	flat := `
-	func do(x):
-		e = x * 5
-		b = e * 6
-		c = b * 7
-		f = c * 1
-		d = c * f
-		out = d * mul(d,e)
-	
-	func add(x ,k):
-		z = k * x
-		out = do(x) + mul(x,z)
-	
-	func main(x,z):
-		out = do(z) + add(x,x)
-	
-	func mul(a,b):
-		out = a * b
-	`
 	//flat := `
+	//func do(x):
+	//	e = x * 5
+	//	b = e * 6
+	//	c = b * 7
+	//	f = c * 1
+	//	d = c * f
+	//	out = d * mul(d,e)
+	//
+	//func add(x ,k):
+	//	z = k * x
+	//	out = do(x) + mul(x,z)
+	//
+	//func main(x,z):
+	//	out = do(z) + add(x,x)
+	//
 	//func mul(a,b):
 	//	out = a * b
-	//
-	//func main(a):
-	//	b = a * a
-	//	c = 4 - b
-	//	d = 5 * c
-	//	out = d / mul(b,b)
 	//`
+	flat := `
+	func mul(a,b):
+		out = a * b
+	
+	func main(a):
+		b = a * a
+		c = 4 - b
+		d = 5 * c
+		out =  mul(d,b) /  mul(b,b)
+	`
 	//flat := `
 	//func main(a,b):
 	//	c = a + b
@@ -80,8 +80,8 @@ func TestNewProgramm(t *testing.T) {
 	fmt.Println(b)
 	fmt.Println(c)
 	a1 := big.NewInt(int64(6))
-	a2 := big.NewInt(int64(5))
-	inputs := []*big.Int{a1, a2}
+	//a2 := big.NewInt(int64(5))
+	inputs := []*big.Int{a1}
 	w := program.CalculateWitness(inputs)
 	fmt.Println("witness")
 	fmt.Println(w)

@@ -39,7 +39,7 @@ func TestCircuitParser(t *testing.T) {
 	//`
 	//parser := NewParser(strings.NewReader(flat))
 	//programm, err := parser.Parse()
-	//circuit := programm.getMainCircut()
+	//circuit := programm.getMainCircuit()
 	//assert.Nil(t, err)
 	//fmt.Println("\n unreduced")
 	//fmt.Println(flat)

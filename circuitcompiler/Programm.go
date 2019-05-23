@@ -6,6 +6,7 @@ import (
 	"github.com/mottla/go-snark/fields"
 	"github.com/mottla/go-snark/r1csqap"
 	"math/big"
+	"sync"
 )
 
 type utils struct {
@@ -15,11 +16,11 @@ type utils struct {
 }
 
 type Program struct {
-	functions               map[string]*Circuit
-	globalInputs            []Constraint
-	arithmeticEnvironment   utils //find a better name
-	extendedFunctionRenamer func(context *Circuit, c Constraint) (newContext *Circuit)
-	R1CS                    struct {
+	functions             map[string]*Circuit
+	globalInputs          []Constraint
+	arithmeticEnvironment utils //find a better name
+
+	R1CS struct {
 		A [][]*big.Int
 		B [][]*big.Int
 		C [][]*big.Int
@@ -35,16 +36,26 @@ func (p *Program) PrintContraintTrees() {
 
 func (p *Program) BuildConstraintTrees() {
 
-	functionRootMap := make(map[string]*gate)
-	for _, circuit := range p.functions {
-		//circuit.addConstraint(p.oneConstraint())
-		fName := composeNewFunction(circuit.Name, circuit.Inputs)
-		root := circuit.gateMap[fName]
-		functionRootMap[fName] = root
-		circuit.root = root
-		circuit.buildTree(root)
+	mainRoot := p.getMainCircuit().root
+
+	if mainRoot.value.Op&(MINUS|PLUS) != 0 {
+		newOut := Constraint{Out: "out", V1: "1", V2: "out2", Op: MULTIPLY}
+		p.getMainCircuit().addConstraint(&newOut)
+		mainRoot.value.Out = "main@out2"
+		p.getMainCircuit().gateMap[mainRoot.value.Out] = mainRoot
 	}
 
+	var wg = sync.WaitGroup{}
+
+	for _, circuit := range p.functions {
+		wg.Add(1)
+		func() {
+			circuit.buildTree(circuit.root)
+			wg.Done()
+		}()
+
+	}
+	wg.Wait()
 	return
 
 }
@@ -61,8 +72,6 @@ func (c *Circuit) buildTree(g *gate) {
 		//g.funcInputs = []*gate{}
 		for _, in := range g.value.Inputs {
 			if gate, ex := c.gateMap[in]; ex {
-				//sadf
-
 				g.funcInputs = append(g.funcInputs, gate)
 				//note that we do repeated work here. the argument
 				c.buildTree(gate)
@@ -90,56 +99,11 @@ func (c *Circuit) buildTree(g *gate) {
 func (p *Program) ReduceCombinedTree() (orderedmGates []gate) {
 	mGatesUsed := make(map[string]bool)
 	orderedmGates = []gate{}
-	functionRootMap := make(map[string]*gate)
-	for k, v := range p.functions {
-		functionRootMap[k] = v.root
-	}
-
-	p.extendedFunctionRenamer = func(context *Circuit, c Constraint) (nextContext *Circuit) {
-		if c.Op != FUNC {
-			panic("not a function")
-		}
-		if _, ex := context.gateMap[c.Out]; !ex {
-			panic("constraint mus be within the context circuit")
-		}
-
-		if b, name, in := isFunction(c.Out); b {
-			if newContext, v := p.functions[name]; v {
-				//fmt.Println("unrenamed thing")
-				//PrintTree(k.root)
-				for i, argument := range in {
-					if gate, ex := context.gateMap[argument]; ex {
-						oldGate := newContext.gateMap[newContext.Inputs[i]]
-						//we take the old gate which was nothing but a input
-						//and link this input to its constituents comming from the calling context.
-						//i think this is pretty neat
-						oldGate.value = gate.value
-						oldGate.right = gate.right
-						oldGate.left = gate.left
-
-					} else {
-						panic("not expected")
-					}
-				}
-
-				newContext.renameInputs(in)
-
-				//fmt.Println("renamed thing")
-				//PrintTree(k.root)
-				return newContext
-			}
-		}
-		panic("not a function dude")
-		return nil
-	}
-	//traverseCombinedMultiplicationGates(p.getMainCircut().root, mGatesUsed, &orderedmGates, functionRootMap, functionRenamer, false, false)
-
-	//markMgates(p.getMainCircut().root, mGatesUsed, &orderedmGates, functionRenamer, false, false)
-	p.markMgates2(p.getMainCircut(), p.getMainCircut().root, mGatesUsed, &orderedmGates, false, false)
+	p.r1CSRecursiveBuild(p.getMainCircuit(), p.getMainCircuit().root, mGatesUsed, &orderedmGates, false, false)
 	return orderedmGates
 }
 
-func (p *Program) markMgates2(contextCircut *Circuit, root *gate, mGatesUsed map[string]bool, orderedmGates *[]gate, negate bool, inverse bool) (isConstant bool) {
+func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, root *gate, mGatesUsed map[string]bool, orderedmGates *[]gate, negate bool, inverse bool) (isConstant bool) {
 
 	if root.OperationType() == IN {
 		return false
@@ -149,27 +113,31 @@ func (p *Program) markMgates2(contextCircut *Circuit, root *gate, mGatesUsed map
 		return true
 	}
 
-	if root.OperationType() == FUNC {
-		nextContext := p.extendedFunctionRenamer(contextCircut, root.value)
-		isConstant = p.markMgates2(nextContext, nextContext.root, mGatesUsed, orderedmGates, negate, inverse)
-	} else {
-		if _, alreadyComputed := mGatesUsed[root.value.V1]; !alreadyComputed {
-			isConstant = p.markMgates2(contextCircut, root.left, mGatesUsed, orderedmGates, negate, inverse)
-		}
+	if _, alreadyComputed := mGatesUsed[root.value.Out]; alreadyComputed {
+		return false
+	}
 
-		if _, alreadyComputed := mGatesUsed[root.value.V2]; !alreadyComputed {
-			cons := p.markMgates2(contextCircut, root.right, mGatesUsed, orderedmGates, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
-			isConstant = isConstant || cons
-		}
+	if root.OperationType() == FUNC {
+		nextContext := p.extendedFunctionRenamer(currentCircuit, root.value)
+		isConstant = p.r1CSRecursiveBuild(nextContext, nextContext.root, mGatesUsed, orderedmGates, negate, inverse)
+		return isConstant
+	}
+
+	if _, alreadyComputed := mGatesUsed[root.value.V1]; !alreadyComputed {
+		isConstant = p.r1CSRecursiveBuild(currentCircuit, root.left, mGatesUsed, orderedmGates, negate, inverse)
+	}
+
+	if _, alreadyComputed := mGatesUsed[root.value.V2]; !alreadyComputed {
+		cons := p.r1CSRecursiveBuild(currentCircuit, root.right, mGatesUsed, orderedmGates, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
+		isConstant = isConstant || cons
 	}
 
 	if root.OperationType() == MULTIPLY {
 
-		_, n, _ := isFunction(root.value.Out)
-		if isConstant && !root.value.invert && n != "main" {
+		if isConstant && !root.value.invert && root != p.getMainCircuit().root {
 			return false
 		}
-		root.leftIns = p.collectAtomsInSubtree2(contextCircut, root.left, mGatesUsed, false, false)
+		root.leftIns = p.collectFactors(currentCircuit, root.left, mGatesUsed, false, false)
 		//if root.left.value.Out== root.right.value.Out{
 		//	//note this is not a full copy, but shouldnt be a problem
 		//	root.rightIns= root.leftIns
@@ -177,10 +145,16 @@ func (p *Program) markMgates2(contextCircut *Circuit, root *gate, mGatesUsed map
 		//	collectAtomsInSubtree(root.right, mGatesUsed, 1, root.rightIns, functionRootMap, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
 		//}
 		//root.rightIns = collectAtomsInSubtree3(root.right, mGatesUsed, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
-		root.rightIns = p.collectAtomsInSubtree2(contextCircut, root.right, mGatesUsed, false, false)
+		root.rightIns = p.collectFactors(currentCircuit, root.right, mGatesUsed, false, false)
 		root.index = len(mGatesUsed)
-		mGatesUsed[root.value.Out] = true
+		var nn = root.value.Out
+		//if _, ex := p.functions[nn]; ex {
+		//	nn = composeNewFunction(root.value.Out, currentCircuit.Inputs)
+		//}
+
+		mGatesUsed[nn] = true
 		rootGate := cloneGate(root)
+		rootGate.value.Out = nn
 		*orderedmGates = append(*orderedmGates, *rootGate)
 
 	}
@@ -260,10 +234,12 @@ func abs(n int) (val int, positive bool) {
 
 //returns the reduced sum of two input factor arrays
 //if no reduction was done (worst case), it returns the concatenation of the input arrays
-func addFactors(leftFactors, rightFactors []factor) (res []factor) {
+func addFactors(leftFactors, rightFactors []factor) []factor {
 	var found bool
+	res := make([]factor, 0, len(leftFactors)+len(rightFactors))
 	for _, facLeft := range leftFactors {
 
+		found = false
 		for i, facRight := range rightFactors {
 
 			if facLeft.typ&facRight.typ == CONST {
@@ -274,8 +250,10 @@ func addFactors(leftFactors, rightFactors []factor) (res []factor) {
 				if facRight.negate {
 					b0 *= -1
 				}
-				absValue, negate := abs(a0*facRight.multiplicative[1] + facLeft.multiplicative[1]*b0)
-				rightFactors[i] = factor{typ: CONST, negate: negate, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}}
+				absValue, positive := abs(a0*facRight.multiplicative[1] + facLeft.multiplicative[1]*b0)
+
+				rightFactors[i] = factor{typ: CONST, negate: !positive, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}}
+
 				found = true
 				//res = append(res, factor{typ: CONST, negate: negate, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}})
 				break
@@ -288,8 +266,10 @@ func addFactors(leftFactors, rightFactors []factor) (res []factor) {
 				if facRight.negate {
 					b0 *= -1
 				}
-				absValue, negate := abs(a0*facRight.multiplicative[1] + facLeft.multiplicative[1]*b0)
-				rightFactors[i] = factor{typ: IN, invert: facRight.invert, name: facRight.name, negate: negate, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}}
+				absValue, positive := abs(a0*facRight.multiplicative[1] + facLeft.multiplicative[1]*b0)
+
+				rightFactors[i] = factor{typ: IN, invert: facRight.invert, name: facRight.name, negate: !positive, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}}
+
 				found = true
 				//res = append(res, factor{typ: CONST, negate: negate, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}})
 				break
@@ -297,13 +277,19 @@ func addFactors(leftFactors, rightFactors []factor) (res []factor) {
 		}
 		if !found {
 			res = append(res, facLeft)
-			found = false
 		}
 	}
-	return append(res, rightFactors...)
+
+	for _, val := range rightFactors {
+		if val.multiplicative[0] != 0 {
+			res = append(res, val)
+		}
+	}
+
+	return res
 }
 
-func (p *Program) collectAtomsInSubtree2(contextCircut *Circuit, g *gate, mGatesUsed map[string]bool, negate bool, invert bool) []factor {
+func (p *Program) collectFactors(contextCircut *Circuit, g *gate, mGatesUsed map[string]bool, negate bool, invert bool) []factor {
 
 	if _, ex := mGatesUsed[g.value.Out]; ex {
 		return []factor{{typ: IN, name: g.value.Out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}
@@ -314,7 +300,7 @@ func (p *Program) collectAtomsInSubtree2(contextCircut *Circuit, g *gate, mGates
 	}
 	if g.OperationType() == FUNC {
 		nextContext := p.extendedFunctionRenamer(contextCircut, g.value)
-		return p.collectAtomsInSubtree2(nextContext, nextContext.root, mGatesUsed, negate, invert)
+		return p.collectFactors(nextContext, nextContext.root, mGatesUsed, negate, invert)
 	}
 
 	if g.OperationType() == CONST {
@@ -331,16 +317,16 @@ func (p *Program) collectAtomsInSubtree2(contextCircut *Circuit, g *gate, mGates
 	var leftFactors, rightFactors []factor
 	if g.left.OperationType() == FUNC {
 		nextContext := p.extendedFunctionRenamer(contextCircut, g.left.value)
-		leftFactors = p.collectAtomsInSubtree2(nextContext, nextContext.root, mGatesUsed, negate, invert)
+		leftFactors = p.collectFactors(nextContext, nextContext.root, mGatesUsed, negate, invert)
 	} else {
-		leftFactors = p.collectAtomsInSubtree2(contextCircut, g.left, mGatesUsed, negate, invert)
+		leftFactors = p.collectFactors(contextCircut, g.left, mGatesUsed, negate, invert)
 	}
 
 	if g.right.OperationType() == FUNC {
 		nextContext := p.extendedFunctionRenamer(contextCircut, g.right.value)
-		rightFactors = p.collectAtomsInSubtree2(nextContext, nextContext.root, mGatesUsed, Xor(negate, g.value.negate), Xor(invert, g.value.invert))
+		rightFactors = p.collectFactors(nextContext, nextContext.root, mGatesUsed, Xor(negate, g.value.negate), Xor(invert, g.value.invert))
 	} else {
-		rightFactors = p.collectAtomsInSubtree2(contextCircut, g.right, mGatesUsed, Xor(negate, g.value.negate), Xor(invert, g.value.invert))
+		rightFactors = p.collectFactors(contextCircut, g.right, mGatesUsed, Xor(negate, g.value.negate), Xor(invert, g.value.invert))
 	}
 
 	switch g.OperationType() {
@@ -356,7 +342,7 @@ func (p *Program) collectAtomsInSubtree2(contextCircut *Circuit, g *gate, mGates
 
 //copies a gate neglecting its references to other gates
 func cloneGate(in *gate) (out *gate) {
-	constr := Constraint{Inputs: in.value.Inputs, Out: in.value.Out, Op: in.value.Op, invert: in.value.invert, negate: in.value.negate, V2: in.value.V2, V1: in.value.V1}
+	constr := &Constraint{Inputs: in.value.Inputs, Out: in.value.Out, Op: in.value.Op, invert: in.value.invert, negate: in.value.negate, V2: in.value.V2, V1: in.value.V1}
 	nRightins := make([]factor, len(in.rightIns))
 	nLeftInst := make([]factor, len(in.leftIns))
 	for k, v := range in.rightIns {
@@ -368,11 +354,12 @@ func cloneGate(in *gate) (out *gate) {
 	return &gate{value: constr, leftIns: nLeftInst, rightIns: nRightins, index: in.index}
 }
 
-func (p *Program) getMainCircut() *Circuit {
+func (p *Program) getMainCircuit() *Circuit {
 	return p.functions["main"]
 }
 
 func (p *Program) addGlobalInput(c Constraint) {
+	c.Out = "main@" + c.Out
 	p.globalInputs = append(p.globalInputs, c)
 }
 
@@ -392,47 +379,56 @@ func prepareUtils() utils {
 		PF:  pf,
 	}
 }
-func NewProgramm() *Program {
 
-	//return &Program{functions: map[string]*Circuit{}, signals: []string{}, globalInputs: []*Constraint{{Op: PLUS, V1:"1",V2:"0", Out: "one"}}}
-	return &Program{functions: map[string]*Circuit{}, globalInputs: []Constraint{{Op: IN, Out: "one"}}, arithmeticEnvironment: prepareUtils()}
+func (p *Program) extendedFunctionRenamer(contextCircuit *Circuit, constraint *Constraint) (nextContext *Circuit) {
+
+	if constraint.Op != FUNC {
+		panic("not a function")
+	}
+	//if _, ex := contextCircuit.gateMap[constraint.Out]; !ex {
+	//	panic("constraint must be within the contextCircuit circuit")
+	//}
+	if b, n, _ := isFunction(constraint.Out); b {
+		if newContext, v := p.functions[n]; v {
+			//am i certain that constraint.inputs is alwazs equal to n??? me dont like it
+			for i, argument := range constraint.Inputs {
+				isConst, _ := isValue(argument)
+				if isConst {
+					continue
+				}
+				isFunc, _, _ := isFunction(argument)
+				if isFunc {
+					panic("functions as arguments no supported yet")
+					//p.extendedFunctionRenamer(contextCircuit,)
+				}
+				//at this point I assert that argument is a variable. This can become troublesome later
+				inputOriginCircuit := p.functions[getContextFromVariable(argument)]
+				if gate, ex := inputOriginCircuit.gateMap[argument]; ex {
+					oldGate := newContext.gateMap[newContext.Inputs[i]]
+					//we take the old gate which was nothing but a input
+					//and link this input to its constituents comming from the calling contextCircuit.
+					//i think this is pretty neat
+					oldGate.value = gate.value
+					oldGate.right = gate.right
+					oldGate.left = gate.left
+
+				} else {
+					panic("not expected")
+				}
+			}
+			newContext.renameInputs(constraint.Inputs)
+			return newContext
+		}
+	} else {
+		panic("not expected")
+	}
+
+	return nil
 }
 
-func (p *Program) addFunction(constraint *Constraint) (c *Circuit) {
-	name := constraint.Out
-	fmt.Println("try to add function ", name)
-
-	b, name2, _ := isFunction(name)
-	if !b {
-		panic(fmt.Sprintf("not a function: %v", constraint))
-	}
-	name = name2
-
-	if _, ex := p.functions[name]; ex {
-		panic("function already declared")
-	}
-
-	c = newCircuit(name)
-
-	p.functions[name] = c
-
-	//I need the inputs to be defined as input constraints for each function for later renaming conventions
-	//if constraint.Literal == "main" {
-	for _, in := range constraint.Inputs {
-		newConstr := Constraint{
-			Op:  IN,
-			Out: in,
-		}
-		if name == "main" {
-			p.addGlobalInput(newConstr)
-		}
-		c.addConstraint(newConstr)
-	}
-	//}
-
-	c.Inputs = constraint.Inputs
+func NewProgram() (p *Program) {
+	p = &Program{functions: map[string]*Circuit{}, globalInputs: []Constraint{{Op: IN, Out: "one"}}, arithmeticEnvironment: prepareUtils()}
 	return
-
 }
 
 // GenerateR1CS generates the R1CS polynomials from the Circuit
@@ -496,11 +492,17 @@ func fractionToField(in [2]int) *big.Int {
 }
 
 func convertAndInsertFactorAt(arr []*big.Int, val factor, index int) {
-	if val.typ == CONST {
-		arr[0] = new(big.Int).Add(arr[0], fractionToField(val.multiplicative))
-		return
+	value := new(big.Int).Add(new(big.Int), fractionToField(val.multiplicative))
+
+	if val.negate {
+		value.Neg(value)
 	}
-	arr[index] = new(big.Int).Add(arr[index], fractionToField(val.multiplicative))
+
+	if val.typ == CONST {
+		arr[0] = value
+	} else {
+		arr[index] = value
+	}
 
 }
 

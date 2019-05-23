@@ -5,6 +5,7 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/circuitcompiler/Programm.go" beforeDir="false" afterPath="$PROJECT_DIR$/circuitcompiler/Programm.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/circuitcompiler/circuit.go" beforeDir="false" afterPath="$PROJECT_DIR$/circuitcompiler/circuit.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/circuitcompiler/parser.go" beforeDir="false" afterPath="$PROJECT_DIR$/circuitcompiler/parser.go" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -17,8 +18,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/circuitcompiler/Programm_test.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="149">
-              <caret line="24" column="26" selection-start-line="24" selection-start-column="26" selection-end-line="24" selection-end-column="26" />
+            <state relative-caret-position="381">
+              <caret line="38" column="19" lean-forward="true" selection-start-line="38" selection-start-column="19" selection-end-line="38" selection-end-column="19" />
             </state>
           </provider>
         </entry>
@@ -35,7 +36,7 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file:///usr/local/go/src/testing/testing.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="171">
+            <state relative-caret-position="11625">
               <caret line="791" selection-start-line="791" selection-end-line="791" />
             </state>
           </provider>
@@ -50,11 +51,11 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="false">
+      <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/circuitcompiler/Programm.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="191">
-              <caret line="399" lean-forward="true" selection-start-line="399" selection-end-line="399" />
+            <state relative-caret-position="210">
+              <caret line="364" column="33" lean-forward="true" selection-start-line="364" selection-start-column="33" selection-end-line="364" selection-end-column="33" />
               <folding>
                 <element signature="e#25#165#0" expanded="true" />
               </folding>
@@ -62,11 +63,23 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/circuitcompiler/circuit.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="176">
-              <caret line="74" column="32" lean-forward="true" selection-start-line="74" selection-start-column="32" selection-end-line="74" selection-end-column="32" />
+            <state relative-caret-position="394">
+              <caret line="166" column="32" selection-start-line="166" selection-start-column="32" selection-end-line="166" selection-end-column="32" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/circuitcompiler/parser.go">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="2265">
+              <caret line="156" column="34" selection-start-line="156" selection-start-column="34" selection-end-line="156" selection-end-column="34" />
+              <folding>
+                <element signature="e#25#72#0" expanded="true" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -74,8 +87,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/r1csqap/r1csqap.go">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="585">
-              <caret line="45" column="5" selection-start-line="45" selection-start-column="5" selection-end-line="45" selection-end-column="5" />
+            <state relative-caret-position="315">
+              <caret line="27" column="30" lean-forward="true" selection-start-line="27" selection-start-column="30" selection-end-line="27" selection-end-column="30" />
             </state>
           </provider>
         </entry>
@@ -145,14 +158,14 @@
         <option value="$PROJECT_DIR$/../../go-lexer/lexer.go" />
         <option value="$PROJECT_DIR$/circuitcompiler/lexer/lexer.go" />
         <option value="$PROJECT_DIR$/circuitcompiler/lexer/lexer_test/lexer_test.go" />
-        <option value="$PROJECT_DIR$/circuitcompiler/parser.go" />
-        <option value="$PROJECT_DIR$/r1csqap/r1csqap.go" />
         <option value="$PROJECT_DIR$/snark.go" />
         <option value="$PROJECT_DIR$/snark_test.go" />
         <option value="$PROJECT_DIR$/circuitcompiler/Programm_test.go" />
         <option value="$PROJECT_DIR$/circuitcompiler/test.py" />
-        <option value="$PROJECT_DIR$/circuitcompiler/circuit.go" />
+        <option value="$PROJECT_DIR$/r1csqap/r1csqap.go" />
+        <option value="$PROJECT_DIR$/circuitcompiler/parser.go" />
         <option value="$PROJECT_DIR$/circuitcompiler/Programm.go" />
+        <option value="$PROJECT_DIR$/circuitcompiler/circuit.go" />
       </list>
     </option>
   </component>
@@ -167,7 +180,6 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -184,65 +196,11 @@
               <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
               <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
             </path>
-            <path>
-              <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
-              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
-              <item name="Go SDK 1.11.2" type="20ee2d1f:SyntheticLibraryElementNode" />
-            </path>
-            <path>
-              <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
-              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
-              <item name="Go SDK 1.11.2" type="20ee2d1f:SyntheticLibraryElementNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
-              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
-              <item name="Go SDK 1.11.2" type="20ee2d1f:SyntheticLibraryElementNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="go" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
-              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
-              <item name="Go SDK 1.11.2" type="20ee2d1f:SyntheticLibraryElementNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="go" type="462c0819:PsiDirectoryNode" />
-              <item name="parser" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
-              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
-              <item name="Go SDK 1.11.2" type="20ee2d1f:SyntheticLibraryElementNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="go" type="462c0819:PsiDirectoryNode" />
-              <item name="token" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
-              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
-              <item name="Go SDK 1.11.2" type="20ee2d1f:SyntheticLibraryElementNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="image" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
-              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
-              <item name="Go SDK 1.11.2" type="20ee2d1f:SyntheticLibraryElementNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="index" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="go-snark" type="b2602c69:ProjectViewProjectNode" />
-              <item name="External Libraries" type="cb654da1:ExternalLibrariesNode" />
-              <item name="Go SDK 1.11.2" type="20ee2d1f:SyntheticLibraryElementNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="mime" type="462c0819:PsiDirectoryNode" />
-            </path>
           </expand>
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -343,34 +301,34 @@
     </recent_temporary>
   </component>
   <component name="TestHistory">
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 09h 52m 13s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 21h 42m 51s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 09h 57m 21s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 08h 36m 33s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 09h 57m 24s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 08h 38m 35s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 09h 58m 26s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 08h 42m 49s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 10h 10m 46s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 08h 47m 09s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 10h 10m 48s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 08h 49m 21s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 10h 14m 40s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 08h 52m 52s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 10h 16m 30s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 08h 52m 53s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 10h 16m 31s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 09h 57m 52s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
-    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.23 at 10h 21m 54s.xml">
+    <history-entry file="TestNewProgramm_in_github_com_mottla_go-snark_circuitcompiler - 2019.05.24 at 09h 57m 53s.xml">
       <configuration name="TestNewProgramm in github.com/mottla/go-snark/circuitcompiler" configurationId="GoTestRunConfiguration" />
     </history-entry>
   </component>
@@ -385,14 +343,13 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="64" y="-11" width="1857" height="1020" extended-state="6" />
-    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.16141514" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.18518518" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.32893288" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.3751375" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.34543455" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.39823982" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -442,7 +399,9 @@
     <MESSAGE value="optimizing R1CS representation" />
     <MESSAGE value="cleaning up a bit" />
     <MESSAGE value="working on multiplication gate reduction algo" />
-    <option name="LAST_COMMIT_MESSAGE" value="working on multiplication gate reduction algo" />
+    <MESSAGE value="constraint is no longer a reference pointer" />
+    <MESSAGE value="new renaming logic preparations" />
+    <option name="LAST_COMMIT_MESSAGE" value="new renaming logic preparations" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -494,14 +453,63 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
-          <line>244</line>
+          <line>204</line>
           <option name="timeStamp" value="79" />
         </line-breakpoint>
         <line-breakpoint enabled="true" type="DlvLineBreakpoint">
           <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
-          <line>111</line>
+          <line>421</line>
+          <option name="timeStamp" value="107" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>425</line>
+          <option name="timeStamp" value="108" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>406</line>
+          <option name="timeStamp" value="109" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>410</line>
+          <option name="timeStamp" value="111" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>275</line>
+          <option name="timeStamp" value="135" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>276</line>
           <properties />
-          <option name="timeStamp" value="105" />
+          <option name="timeStamp" value="138" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>299</line>
+          <properties />
+          <option name="timeStamp" value="140" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>292</line>
+          <properties />
+          <option name="timeStamp" value="141" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>370</line>
+          <properties />
+          <option name="timeStamp" value="144" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" type="DlvLineBreakpoint">
+          <url>file://$PROJECT_DIR$/circuitcompiler/Programm.go</url>
+          <line>380</line>
+          <properties />
+          <option name="timeStamp" value="145" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
@@ -644,16 +652,6 @@
     <entry file="file:///usr/local/go/src/image/png/testdata/benchPaletted.png">
       <provider selected="true" editor-type-id="images" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/circuitcompiler/parser.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="1830">
-          <caret line="127" column="9" selection-start-line="127" selection-start-column="9" selection-end-line="127" selection-end-column="9" />
-          <folding>
-            <element signature="e#25#72#0" expanded="true" />
-          </folding>
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/fields/fq6.go">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -734,10 +732,27 @@
         </state>
       </provider>
     </entry>
+    <entry file="file:///usr/local/go/src/testing/testing.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="11625">
+          <caret line="791" selection-start-line="791" selection-end-line="791" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/circuitcompiler/parser.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2265">
+          <caret line="156" column="34" selection-start-line="156" selection-start-column="34" selection-end-line="156" selection-end-column="34" />
+          <folding>
+            <element signature="e#25#72#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/r1csqap/r1csqap.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="585">
-          <caret line="45" column="5" selection-start-line="45" selection-start-column="5" selection-end-line="45" selection-end-column="5" />
+        <state relative-caret-position="315">
+          <caret line="27" column="30" lean-forward="true" selection-start-line="27" selection-start-column="30" selection-end-line="27" selection-end-column="30" />
         </state>
       </provider>
     </entry>
@@ -761,13 +776,6 @@
         </state>
       </provider>
     </entry>
-    <entry file="file:///usr/local/go/src/testing/testing.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="171">
-          <caret line="791" selection-start-line="791" selection-end-line="791" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file:///usr/local/go/src/runtime/panic.go">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="164">
@@ -777,25 +785,25 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/circuitcompiler/Programm_test.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="149">
-          <caret line="24" column="26" selection-start-line="24" selection-start-column="26" selection-end-line="24" selection-end-column="26" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/circuitcompiler/Programm.go">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="191">
-          <caret line="399" lean-forward="true" selection-start-line="399" selection-end-line="399" />
-          <folding>
-            <element signature="e#25#165#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="381">
+          <caret line="38" column="19" lean-forward="true" selection-start-line="38" selection-start-column="19" selection-end-line="38" selection-end-column="19" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/circuitcompiler/circuit.go">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="176">
-          <caret line="74" column="32" lean-forward="true" selection-start-line="74" selection-start-column="32" selection-end-line="74" selection-end-column="32" />
+        <state relative-caret-position="394">
+          <caret line="166" column="32" selection-start-line="166" selection-start-column="32" selection-end-line="166" selection-end-column="32" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/circuitcompiler/Programm.go">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="210">
+          <caret line="364" column="33" lean-forward="true" selection-start-line="364" selection-start-column="33" selection-end-line="364" selection-end-column="33" />
+          <folding>
+            <element signature="e#25#165#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>

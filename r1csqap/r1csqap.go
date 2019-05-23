@@ -24,9 +24,9 @@ func Transpose(matrix [][]*big.Int) [][]*big.Int {
 // ArrayOfBigZeros creates a *big.Int array with n elements to zero
 func ArrayOfBigZeros(num int) []*big.Int {
 	bigZero := big.NewInt(int64(0))
-	var r []*big.Int
+	var r = make([]*big.Int, num, num)
 	for i := 0; i < num; i++ {
-		r = append(r, bigZero)
+		r[i] = bigZero
 	}
 	return r
 }

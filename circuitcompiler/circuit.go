@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var variableIndicationSign = "@"
+
 // Circuit is the data structure of the compiled circuit
 type Circuit struct {
 	Inputs []string
@@ -24,8 +26,8 @@ type gate struct {
 	left       *gate
 	right      *gate
 	funcInputs []*gate
-	value      Constraint //is a pointer a good thing here??
-	leftIns    []factor   //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
+	value      *Constraint //is a pointer a good thing here??
+	leftIns    []factor    //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
 	rightIns   []factor
 }
 
@@ -48,6 +50,7 @@ type Constraint struct {
 	//fV2  *variable
 	//fOut *variable
 	//Literal string
+	//TODO once i've implemented a new parser/lexer we do this differently
 	Inputs []string // in func declaration case
 	//fInputs []*variable
 	negate bool
@@ -65,15 +68,56 @@ func newCircuit(name string) *Circuit {
 	return &Circuit{Name: name, gateMap: make(map[string]*gate)}
 }
 
-func (circ *Circuit) addConstraint(constraint Constraint) {
+func (p *Program) addFunction(constraint *Constraint) (c *Circuit) {
+	name := constraint.Out
+	fmt.Println("try to add function ", name)
+
+	b, name2, _ := isFunction(name)
+	if !b {
+		panic(fmt.Sprintf("not a function: %v", constraint))
+	}
+	name = name2
+
+	if _, ex := p.functions[name]; ex {
+		panic("function already declared")
+	}
+
+	c = newCircuit(name)
+
+	p.functions[name] = c
+
+	renamedInputs := make([]string, len(constraint.Inputs))
+	//I need the inputs to be defined as input constraints for each function for later renaming conventions
+	//if constraint.Literal == "main" {
+	for i, in := range constraint.Inputs {
+		newConstr := &Constraint{
+			Op:  IN,
+			Out: in,
+		}
+		if name == "main" {
+			p.addGlobalInput(*newConstr)
+		}
+		c.addConstraint(newConstr)
+		renamedInputs[i] = newConstr.Out
+	}
+	//}
+
+	c.Inputs = renamedInputs
+	return
+
+}
+
+func (circ *Circuit) addConstraint(constraint *Constraint) {
 	if _, ex := circ.gateMap[constraint.Out]; ex {
 		panic("already used FlatConstraint")
 	}
+	gateToAdd := &gate{value: constraint}
 
 	if constraint.Op == DIVIDE {
 		constraint.Op = MULTIPLY
 		constraint.invert = true
-	} else if constraint.Op == MINUS {
+	}
+	if constraint.Op == MINUS {
 		constraint.Op = PLUS
 		constraint.negate = true
 	}
@@ -81,47 +125,40 @@ func (circ *Circuit) addConstraint(constraint Constraint) {
 	//todo this is dangerous.. if someone would use out as variable name, things would be fucked
 	if constraint.Out == "out" {
 		constraint.Out = composeNewFunction(circ.Name, circ.Inputs)
-		if circ.Name == "main" {
-			//the main functions output must be a multiplication gate
-			//if its not, then we simple create one where outNew = 1 * outOld
-			if constraint.Op&(MINUS|PLUS) != 0 {
-				newOut := Constraint{Out: constraint.Out, V1: "1", V2: "out2", Op: MULTIPLY}
-				//TODO reachable?
-				delete(circ.gateMap, constraint.Out)
-				circ.addConstraint(newOut)
-				constraint.Out = "out2"
-				circ.addConstraint(constraint)
-			}
-		}
+		circ.root = gateToAdd
+	} else {
+		constraint.Out = circ.renamer(constraint.Out)
 	}
 
-	addConstantsAndFunctions := func(constraint string) {
-		if b, _ := isValue(constraint); b {
-			circ.gateMap[constraint] = &gate{value: Constraint{Op: CONST, Out: constraint}}
-		} else if b, _, inputs := isFunction(constraint); b {
+	constraint.V1 = circ.renamer(constraint.V1)
+	constraint.V2 = circ.renamer(constraint.V2)
 
-			//check if function input is a constant like foo(a,4)
-			for _, in := range inputs {
-				if b, _ := isValue(in); b {
-					circ.gateMap[in] = &gate{value: Constraint{Op: CONST, Out: in}}
-					continue
-				}
-				//if the argument is not in the constraint map, we panic. I used to do this later, but since we have a line
-				//interpreter, we can do this here
-				//the downside is that there cannot be functions passed as arguments
-				//if _, ex := circ.constraintMap[in];!ex {
-				//	panic("undefined argument")
-				//
-				//}
-			}
-			circ.gateMap[constraint] = &gate{value: Constraint{Op: FUNC, Out: constraint, Inputs: inputs}}
-		}
+	circ.gateMap[constraint.Out] = gateToAdd
+}
+
+func (circ *Circuit) renamer(constraint string) string {
+
+	if constraint == "" {
+		return ""
 	}
 
-	addConstantsAndFunctions(constraint.V1)
-	addConstantsAndFunctions(constraint.V2)
+	if b, _ := isValue(constraint); b {
+		circ.gateMap[constraint] = &gate{value: &Constraint{Op: CONST, Out: constraint}}
+		return constraint
+	}
 
-	circ.gateMap[constraint.Out] = &gate{value: constraint}
+	if b, name, inputs := isFunction(constraint); b {
+		renamedInputs := make([]string, len(inputs))
+		for i, in := range inputs {
+			renamedInputs[i] = circ.renamer(in)
+		}
+		nn := composeNewFunction(name, renamedInputs)
+		circ.gateMap[nn] = &gate{value: &Constraint{Op: FUNC, Out: nn, Inputs: renamedInputs}}
+		return nn
+	}
+
+	return circ.Name + variableIndicationSign + constraint
+
 }
 
 func (circ *Circuit) renameInputs(inputs []string) {
@@ -183,6 +220,13 @@ func (circ *Circuit) renameInputs(inputs []string) {
 
 	}
 	return
+}
+
+func getContextFromVariable(in string) string {
+	if strings.Contains(in, variableIndicationSign) {
+		return strings.Split(in, variableIndicationSign)[0]
+	}
+	return ""
 }
 
 func composeNewFunction(fname string, inputs []string) string {
