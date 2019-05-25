@@ -26,6 +26,7 @@ type gate struct {
 	left       *gate
 	right      *gate
 	funcInputs []*gate
+	Op         Token
 	value      *Constraint //is a pointer a good thing here??
 	leftIns    []factor    //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
 	rightIns   []factor
