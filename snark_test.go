@@ -18,20 +18,37 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 
 	// circuit function
 	// y = x^3 + x + 5
-	flatCode := `
-	func test(private s0, public s1):
-		s2 = s0 * s0
-		s3 = s2 * s0
-		s4 = s3 + s0
-		s5 = s4 + 5
-		equals(s1, s5)
-		out = 1 * 1
+	code := `
+		func exp3(private a):
+			b = a * a
+			c = a * b
+			return c
+		func sum(private a, private b):
+			c = a + b
+			return c
+
+		func main(private s0, public s1):
+			s3 = exp3(s0)
+			s4 = sum(s3, s0)
+			s5 = s4 + 5
+			equals(s1, s5)
+			out = 1 * 1
 	`
-	fmt.Print("\nflat code of the circuit:")
-	fmt.Println(flatCode)
+	// the same code without the functions calling, all in one func
+	// code := `
+	// func test(private s0, public s1):
+	//         s2 = s0 * s0
+	//         s3 = s2 * s0
+	//         s4 = s3 + s0
+	//         s5 = s4 + 5
+	//         equals(s1, s5)
+	//         out = 1 * 1
+	// `
+	fmt.Print("\ncode of the circuit:")
+	fmt.Println(code)
 
 	// parse the code
-	parser := circuitcompiler.NewParser(strings.NewReader(flatCode))
+	parser := circuitcompiler.NewParser(strings.NewReader(code))
 	circuit, err := parser.Parse()
 	assert.Nil(t, err)
 	// fmt.Println("\ncircuit data:", circuit)
@@ -47,8 +64,8 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	w, err := circuit.CalculateWitness(privateInputs, publicSignals)
 	assert.Nil(t, err)
 
-	// flat code to R1CS
-	fmt.Println("\ngenerating R1CS from flat code")
+	// code to R1CS
+	fmt.Println("\ngenerating R1CS from code")
 	a, b, c := circuit.GenerateR1CS()
 	fmt.Println("\nR1CS:")
 	fmt.Println("a:", a)
@@ -132,16 +149,16 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 }
 
 func TestZkMultiplication(t *testing.T) {
-	flatCode := `
-	func test(private a, private b, public c):
+	code := `
+	func main(private a, private b, public c):
 		d = a * b
 		equals(c, d)
 		out = 1 * 1
 	`
-	fmt.Println("flat code", flatCode)
+	fmt.Println("code", code)
 
 	// parse the code
-	parser := circuitcompiler.NewParser(strings.NewReader(flatCode))
+	parser := circuitcompiler.NewParser(strings.NewReader(code))
 	circuit, err := parser.Parse()
 	assert.Nil(t, err)
 
@@ -155,8 +172,8 @@ func TestZkMultiplication(t *testing.T) {
 	w, err := circuit.CalculateWitness(privateInputs, publicSignals)
 	assert.Nil(t, err)
 
-	// flat code to R1CS
-	fmt.Println("\ngenerating R1CS from flat code")
+	// code to R1CS
+	fmt.Println("\ngenerating R1CS from code")
 	a, b, c := circuit.GenerateR1CS()
 	fmt.Println("\nR1CS:")
 	fmt.Println("a:", a)
@@ -242,8 +259,8 @@ func TestZkMultiplication(t *testing.T) {
 func TestMinimalFlow(t *testing.T) {
 	// circuit function
 	// y = x^3 + x + 5
-	flatCode := `
-	func test(private s0, public s1):
+	code := `
+	func main(private s0, public s1):
 		s2 = s0 * s0
 		s3 = s2 * s0
 		s4 = s3 + s0
@@ -251,11 +268,11 @@ func TestMinimalFlow(t *testing.T) {
 		equals(s1, s5)
 		out = 1 * 1
 	`
-	fmt.Print("\nflat code of the circuit:")
-	fmt.Println(flatCode)
+	fmt.Print("\ncode of the circuit:")
+	fmt.Println(code)
 
 	// parse the code
-	parser := circuitcompiler.NewParser(strings.NewReader(flatCode))
+	parser := circuitcompiler.NewParser(strings.NewReader(code))
 	circuit, err := parser.Parse()
 	assert.Nil(t, err)
 
@@ -268,8 +285,8 @@ func TestMinimalFlow(t *testing.T) {
 	w, err := circuit.CalculateWitness(privateInputs, publicSignals)
 	assert.Nil(t, err)
 
-	// flat code to R1CS
-	fmt.Println("\ngenerating R1CS from flat code")
+	// code to R1CS
+	fmt.Println("\ngenerating R1CS from code")
 	a, b, c := circuit.GenerateR1CS()
 	fmt.Println("\nR1CS:")
 	fmt.Println("a:", a)

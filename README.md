@@ -31,9 +31,9 @@ Minimal complete flow implementation:
 - [x] verify proofs with BN128 pairing
 
 Improvements from the minimal implementation:
+- [x] allow to call functions in circuits language
 - [ ] allow `import` in circuits language
 - [ ] allow `for` in circuits language
-- [ ] code to flat code (improve circuit compiler)
 - [ ] move witness values calculation outside the setup phase
 - [ ] Groth16
 - [ ] multiple optimizations
@@ -54,9 +54,13 @@ In this example we will follow the equation example from [Vitalik](https://mediu
 #### Compile circuit
 Having a circuit file `test.circuit`:
 ```
-func test(private s0, public s1):
-	s2 = s0 * s0
-	s3 = s2 * s0
+func exp3(private a):
+	b = a * a
+	c = a * b
+	return c
+
+func main(private s0, public s1):
+	s3 = exp3(s0)
 	s4 = s3 + s0
 	s5 = s4 + 5
 	equals(s1, s5)
@@ -112,9 +116,13 @@ Example:
 ```go
 // compile circuit and get the R1CS
 flatCode := `
-func test(private s0, public s1):
-	s2 = s0 * s0
-	s3 = s2 * s0
+func exp3(private a):
+	b = a * a
+	c = a * b
+	return c
+
+func main(private s0, public s1):
+	s3 = exp3(s0)
 	s4 = s3 + s0
 	s5 = s4 + 5
 	equals(s1, s5)
@@ -147,8 +155,8 @@ a, b, c := circuit.GenerateR1CS()
 
 /*
 now we have the R1CS from the circuit:
-a: [[0 0 1 0 0 0 0 0] [0 0 0 1 0 0 0 0] [0 0 1 0 1 0 0 0] [5 0 0 0 0 1 0 0] [0 0 0 0 0 0 1 0] [0 1 0 0 0 0 0 0] [1 0 0 0 0 0 0 0]]
-b: [[0 0 1 0 0 0 0 0] [0 0 1 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0]]
+a: [[0 0 1 0 0 0 0 0] [0 0 1 0 0 0 0 0] [0 0 1 0 1 0 0 0] [5 0 0 0 0 1 0 0] [0 0 0 0 0 0 1 0] [0 1 0 0 0 0 0 0] [1 0 0 0 0 0 0 0]]
+b: [[0 0 1 0 0 0 0 0] [0 0 0 1 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0] [1 0 0 0 0 0 0 0]]
 c: [[0 0 0 1 0 0 0 0] [0 0 0 0 1 0 0 0] [0 0 0 0 0 1 0 0] [0 0 0 0 0 0 1 0] [0 1 0 0 0 0 0 0] [0 0 0 0 0 0 1 0] [0 0 0 0 0 0 0 1]]
 */
 
