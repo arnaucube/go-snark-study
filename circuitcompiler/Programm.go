@@ -17,7 +17,7 @@ type utils struct {
 
 type Program struct {
 	functions             map[string]*Circuit
-	globalInputs          []Constraint
+	globalInputs          []string
 	arithmeticEnvironment utils //find a better name
 
 	R1CS struct {
@@ -43,6 +43,10 @@ func (p *Program) BuildConstraintTrees() {
 		p.getMainCircuit().addConstraint(&newOut)
 		mainRoot.value.Out = "main@out2"
 		p.getMainCircuit().gateMap[mainRoot.value.Out] = mainRoot
+	}
+
+	for _, in := range p.getMainCircuit().Inputs {
+		p.globalInputs = append(p.globalInputs, composeNewFunction(in, p.getMainCircuit().Inputs))
 	}
 
 	var wg = sync.WaitGroup{}
@@ -103,39 +107,35 @@ func (p *Program) ReduceCombinedTree() (orderedmGates []gate) {
 	return orderedmGates
 }
 
-func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, root *gate, mGatesUsed map[string]bool, orderedmGates *[]gate, negate bool, inverse bool) (isConstant bool) {
+func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, root *gate, mGatesUsed map[string]bool, orderedmGates *[]gate, negate bool, inverse bool) (variableEnd bool) {
 
 	if root.OperationType() == IN {
-		return false
-	}
-
-	if root.OperationType() == CONST {
 		return true
 	}
 
-	if _, alreadyComputed := mGatesUsed[root.value.Out]; alreadyComputed {
+	if root.OperationType() == CONST {
 		return false
 	}
 
 	if root.OperationType() == FUNC {
 		nextContext := p.extendedFunctionRenamer(currentCircuit, root.value)
-		isConstant = p.r1CSRecursiveBuild(nextContext, nextContext.root, mGatesUsed, orderedmGates, negate, inverse)
-		return isConstant
+		currentCircuit = nextContext
+		root = nextContext.root
 	}
 
-	if _, alreadyComputed := mGatesUsed[root.value.V1]; !alreadyComputed {
-		isConstant = p.r1CSRecursiveBuild(currentCircuit, root.left, mGatesUsed, orderedmGates, negate, inverse)
+	originOfVariable := p.functions[getContextFromVariable(root.value.Out)]
+	if _, alreadyComputed := mGatesUsed[composeNewFunction(root.value.Out, originOfVariable.currentOutputs())]; alreadyComputed {
+		return true
 	}
 
-	if _, alreadyComputed := mGatesUsed[root.value.V2]; !alreadyComputed {
-		cons := p.r1CSRecursiveBuild(currentCircuit, root.right, mGatesUsed, orderedmGates, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
-		isConstant = isConstant || cons
-	}
+	variableEnd = p.r1CSRecursiveBuild(currentCircuit, root.left, mGatesUsed, orderedmGates, negate, inverse)
+
+	cons := p.r1CSRecursiveBuild(currentCircuit, root.right, mGatesUsed, orderedmGates, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
 
 	if root.OperationType() == MULTIPLY {
 
-		if isConstant && !root.value.invert && root != p.getMainCircuit().root {
-			return false
+		if !(variableEnd && cons) && !root.value.invert && root != p.getMainCircuit().root {
+			return variableEnd || cons
 		}
 		root.leftIns = p.collectFactors(currentCircuit, root.left, mGatesUsed, false, false)
 		//if root.left.value.Out== root.right.value.Out{
@@ -147,19 +147,21 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, root *gate, mGates
 		//root.rightIns = collectAtomsInSubtree3(root.right, mGatesUsed, Xor(negate, root.value.negate), Xor(inverse, root.value.invert))
 		root.rightIns = p.collectFactors(currentCircuit, root.right, mGatesUsed, false, false)
 		root.index = len(mGatesUsed)
-		var nn = root.value.Out
-		//if _, ex := p.functions[nn]; ex {
-		//	nn = composeNewFunction(root.value.Out, currentCircuit.Inputs)
+		var nn = composeNewFunction(root.value.Out, originOfVariable.currentOutputs())
+		//var nn = root.value.Out
+		//if _, ex := p.functions[root.value.Out]; ex {
+		//	nn = currentCircuit.currentOutputName()
 		//}
-
+		if _, ex := mGatesUsed[nn]; ex {
+			panic(fmt.Sprintf("told ya so %v", nn))
+		}
 		mGatesUsed[nn] = true
 		rootGate := cloneGate(root)
 		rootGate.value.Out = nn
 		*orderedmGates = append(*orderedmGates, *rootGate)
-
 	}
 
-	return isConstant
+	return variableEnd || cons
 	//TODO optimize if output is not a multipication gate
 }
 
@@ -211,11 +213,18 @@ func mulFactors(leftFactors, rightFactors []factor) (result []factor) {
 			//this one should only be reached, after a true mgate had its left and right braches computed. here we
 			//a factor can appear at most in quadratic form. we reduce terms a*a^-1 here.
 			if facRight.typ&facLeft.typ == IN {
-				//if facRight.n
+				if facLeft.name == facRight.name {
+					if facRight.invert != facLeft.invert {
+						rightFactors[i] = factor{typ: CONST, negate: Xor(facRight.negate, facLeft.negate), multiplicative: mul2DVector(facRight.multiplicative, facLeft.multiplicative)}
+						continue
+					}
+				}
+
 				//rightFactors[i] = factor{typ: CONST, negate: Xor(facRight.negate, facLeft.negate), multiplicative: mul2DVector(facRight.multiplicative, facLeft.multiplicative)}
 				//continue
 
 			}
+			fmt.Println("dsf")
 			panic("unexpected")
 
 		}
@@ -289,22 +298,10 @@ func addFactors(leftFactors, rightFactors []factor) []factor {
 	return res
 }
 
-func (p *Program) collectFactors(contextCircut *Circuit, g *gate, mGatesUsed map[string]bool, negate bool, invert bool) []factor {
+func (p *Program) collectFactors(contextCircut *Circuit, node *gate, mGatesUsed map[string]bool, negate bool, invert bool) []factor {
 
-	if _, ex := mGatesUsed[g.value.Out]; ex {
-		return []factor{{typ: IN, name: g.value.Out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}
-	}
-
-	if g.OperationType() == IN {
-		return []factor{{typ: IN, name: g.value.Out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}
-	}
-	if g.OperationType() == FUNC {
-		nextContext := p.extendedFunctionRenamer(contextCircut, g.value)
-		return p.collectFactors(nextContext, nextContext.root, mGatesUsed, negate, invert)
-	}
-
-	if g.OperationType() == CONST {
-		b1, v1 := isValue(g.value.Out)
+	if node.OperationType() == CONST {
+		b1, v1 := isValue(node.value.Out)
 		if !b1 {
 			panic("not a constant")
 		}
@@ -314,22 +311,38 @@ func (p *Program) collectFactors(contextCircut *Circuit, g *gate, mGatesUsed map
 		return []factor{{typ: CONST, negate: negate, multiplicative: [2]int{v1, 1}}}
 	}
 
-	var leftFactors, rightFactors []factor
-	if g.left.OperationType() == FUNC {
-		nextContext := p.extendedFunctionRenamer(contextCircut, g.left.value)
-		leftFactors = p.collectFactors(nextContext, nextContext.root, mGatesUsed, negate, invert)
-	} else {
-		leftFactors = p.collectFactors(contextCircut, g.left, mGatesUsed, negate, invert)
+	if node.OperationType() == FUNC {
+		nextContext := p.extendedFunctionRenamer(contextCircut, node.value)
+
+		//if _, ex := mGatesUsed[nextContext.currentOutputName()]; ex {
+		//	return []factor{{typ: IN, name: nextContext.currentOutputName(), invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}
+		//}
+		contextCircut = nextContext
+		node = nextContext.root
 	}
 
-	if g.right.OperationType() == FUNC {
-		nextContext := p.extendedFunctionRenamer(contextCircut, g.right.value)
-		rightFactors = p.collectFactors(nextContext, nextContext.root, mGatesUsed, Xor(negate, g.value.negate), Xor(invert, g.value.invert))
-	} else {
-		rightFactors = p.collectFactors(contextCircut, g.right, mGatesUsed, Xor(negate, g.value.negate), Xor(invert, g.value.invert))
+	originOfVariable := p.functions[getContextFromVariable(node.value.Out)]
+	if originOfVariable == nil {
+		fmt.Println("asdf")
+	}
+	lookingFOr := composeNewFunction(node.value.Out, originOfVariable.currentOutputs())
+
+	//if _, ex := mGatesUsed[node.value.Out]; ex {
+	//	return []factor{{typ: IN, name: node.value.Out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}
+	//}
+
+	if node.OperationType() == IN {
+		return []factor{{typ: IN, name: lookingFOr, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}
 	}
 
-	switch g.OperationType() {
+	if _, alreadyComputed := mGatesUsed[lookingFOr]; alreadyComputed {
+		return []factor{{typ: IN, name: lookingFOr, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}
+	}
+
+	leftFactors := p.collectFactors(contextCircut, node.left, mGatesUsed, negate, invert)
+	rightFactors := p.collectFactors(contextCircut, node.right, mGatesUsed, Xor(negate, node.value.negate), Xor(invert, node.value.invert))
+
+	switch node.OperationType() {
 	case MULTIPLY:
 		return mulFactors(leftFactors, rightFactors)
 	case PLUS:
@@ -358,10 +371,10 @@ func (p *Program) getMainCircuit() *Circuit {
 	return p.functions["main"]
 }
 
-func (p *Program) addGlobalInput(c Constraint) {
-	c.Out = "main@" + c.Out
-	p.globalInputs = append(p.globalInputs, c)
-}
+//func (p *Program) addGlobalInput(c Constraint) {
+//	c.Out = "main@" + c.Out
+//	p.globalInputs = append(p.globalInputs, c)
+//}
 
 func prepareUtils() utils {
 	bn, err := bn128.NewBn128()
@@ -388,46 +401,51 @@ func (p *Program) extendedFunctionRenamer(contextCircuit *Circuit, constraint *C
 	//if _, ex := contextCircuit.gateMap[constraint.Out]; !ex {
 	//	panic("constraint must be within the contextCircuit circuit")
 	//}
-	if b, n, _ := isFunction(constraint.Out); b {
-		if newContext, v := p.functions[n]; v {
-			//am i certain that constraint.inputs is alwazs equal to n??? me dont like it
-			for i, argument := range constraint.Inputs {
-				isConst, _ := isValue(argument)
-				if isConst {
-					continue
-				}
-				isFunc, _, _ := isFunction(argument)
-				if isFunc {
-					panic("functions as arguments no supported yet")
-					//p.extendedFunctionRenamer(contextCircuit,)
-				}
-				//at this point I assert that argument is a variable. This can become troublesome later
-				inputOriginCircuit := p.functions[getContextFromVariable(argument)]
-				if gate, ex := inputOriginCircuit.gateMap[argument]; ex {
-					oldGate := newContext.gateMap[newContext.Inputs[i]]
-					//we take the old gate which was nothing but a input
-					//and link this input to its constituents comming from the calling contextCircuit.
-					//i think this is pretty neat
-					oldGate.value = gate.value
-					oldGate.right = gate.right
-					oldGate.left = gate.left
-
-				} else {
-					panic("not expected")
-				}
-			}
-			newContext.renameInputs(constraint.Inputs)
-			return newContext
-		}
-	} else {
+	b, n, _ := isFunction(constraint.Out)
+	if !b {
 		panic("not expected")
+	}
+	if newContext, v := p.functions[n]; v {
+		//am i certain that constraint.inputs is alwazs equal to n??? me dont like it
+		for i, argument := range constraint.Inputs {
+
+			isConst, _ := isValue(argument)
+			if isConst {
+				continue
+			}
+			isFunc, _, _ := isFunction(argument)
+			if isFunc {
+				panic("functions as arguments no supported yet")
+				//p.extendedFunctionRenamer(contextCircuit,)
+			}
+			//at this point I assert that argument is a variable. This can become troublesome later
+			//first we get the circuit in which the argument was created
+			inputOriginCircuit := p.functions[getContextFromVariable(argument)]
+
+			//we pick the gate that has the argument as output
+			if gate, ex := inputOriginCircuit.gateMap[argument]; ex {
+				//we pick the old circuit inputs and let them now reference the same as the argument gate did,
+				oldGate := newContext.gateMap[newContext.Inputs[i]]
+				//we take the old gate which was nothing but a input
+				//and link this input to its constituents coming from the calling contextCircuit.
+				//i think this is pretty neat
+				oldGate.value = gate.value
+				oldGate.right = gate.right
+				oldGate.left = gate.left
+
+			} else {
+				panic("not expected")
+			}
+		}
+		//newContext.renameInputs(constraint.Inputs)
+		return newContext
 	}
 
 	return nil
 }
 
 func NewProgram() (p *Program) {
-	p = &Program{functions: map[string]*Circuit{}, globalInputs: []Constraint{{Op: IN, Out: "one"}}, arithmeticEnvironment: prepareUtils()}
+	p = &Program{functions: map[string]*Circuit{}, globalInputs: []string{"one"}, arithmeticEnvironment: prepareUtils()}
 	return
 }
 
@@ -441,7 +459,7 @@ func (p *Program) GenerateReducedR1CS(mGates []gate) (a, b, c [][]*big.Int) {
 	indexMap := make(map[string]int)
 
 	for i, v := range p.globalInputs {
-		indexMap[v.Out] = i
+		indexMap[v] = i
 
 	}
 	for i, v := range mGates {
@@ -456,10 +474,21 @@ func (p *Program) GenerateReducedR1CS(mGates []gate) (a, b, c [][]*big.Int) {
 			cConstraint := r1csqap.ArrayOfBigZeros(size)
 
 			for _, val := range gate.leftIns {
+				if val.typ != CONST {
+					if _, ex := indexMap[val.name]; !ex {
+						panic(fmt.Sprintf("%v index not found!!!", val.name))
+					}
+				}
 				convertAndInsertFactorAt(aConstraint, val, indexMap[val.name])
 			}
 
 			for _, val := range gate.rightIns {
+				if val.typ != CONST {
+					if _, ex := indexMap[val.name]; !ex {
+						panic(fmt.Sprintf("%v index not found!!!", val.name))
+					}
+				}
+
 				convertAndInsertFactorAt(bConstraint, val, indexMap[val.name])
 			}
 
@@ -498,11 +527,8 @@ func convertAndInsertFactorAt(arr []*big.Int, val factor, index int) {
 		value.Neg(value)
 	}
 
-	if val.typ == CONST {
-		arr[0] = value
-	} else {
-		arr[index] = value
-	}
+	//not that index is 0 if its a constant, since 0 is the map default if no entry was found
+	arr[index] = value
 
 }
 

@@ -26,7 +26,6 @@ type gate struct {
 	left       *gate
 	right      *gate
 	funcInputs []*gate
-	Op         Token
 	value      *Constraint //is a pointer a good thing here??
 	leftIns    []factor    //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
 	rightIns   []factor
@@ -95,9 +94,9 @@ func (p *Program) addFunction(constraint *Constraint) (c *Circuit) {
 			Op:  IN,
 			Out: in,
 		}
-		if name == "main" {
-			p.addGlobalInput(*newConstr)
-		}
+		//if name == "main" {
+		//	p.addGlobalInput(*newConstr)
+		//}
 		c.addConstraint(newConstr)
 		renamedInputs[i] = newConstr.Out
 	}
@@ -125,7 +124,7 @@ func (circ *Circuit) addConstraint(constraint *Constraint) {
 
 	//todo this is dangerous.. if someone would use out as variable name, things would be fucked
 	if constraint.Out == "out" {
-		constraint.Out = composeNewFunction(circ.Name, circ.Inputs)
+		constraint.Out = circ.Name //composeNewFunction(circ.Name, circ.Inputs)
 		circ.root = gateToAdd
 	} else {
 		constraint.Out = circ.renamer(constraint.Out)
@@ -135,6 +134,25 @@ func (circ *Circuit) addConstraint(constraint *Constraint) {
 	constraint.V2 = circ.renamer(constraint.V2)
 
 	circ.gateMap[constraint.Out] = gateToAdd
+}
+
+func (circ *Circuit) currentOutputName() string {
+
+	return composeNewFunction(circ.Name, circ.currentOutputs())
+}
+
+func (circ *Circuit) currentOutputs() []string {
+
+	renamedInputs := make([]string, len(circ.Inputs))
+	for i, in := range circ.Inputs {
+		if _, ex := circ.gateMap[in]; !ex {
+			panic("not existing input")
+		}
+		renamedInputs[i] = circ.gateMap[in].value.Out
+	}
+
+	return renamedInputs
+
 }
 
 func (circ *Circuit) renamer(constraint string) string {
@@ -162,72 +180,73 @@ func (circ *Circuit) renamer(constraint string) string {
 
 }
 
-func (circ *Circuit) renameInputs(inputs []string) {
-	if len(inputs) != len(circ.Inputs) {
-		panic("given inputs != circuit.Inputs")
-	}
-	mapping := make(map[string]string)
-	for i := 0; i < len(inputs); i++ {
-		if _, ex := circ.gateMap[inputs[i]]; ex {
-
-			//this is a tricky part. So we replace former inputs with the new ones, thereby
-			//it might be, that the new input name has already been used for some output inside the function
-			//currently I dont know an elegant way how to handle this renaming issue
-			if circ.gateMap[inputs[i]].value.Op != IN {
-				panic(fmt.Sprintf("renaming collsion with %s", inputs[i]))
-			}
-
-		}
-		mapping[circ.Inputs[i]] = inputs[i]
-	}
-	//fmt.Println(mapping)
-	//circ.Inputs = inputs
-	permute := func(in string) string {
-		if out, ex := mapping[in]; ex {
-			return out
-		}
-		return in
-	}
-
-	permuteListe := func(in []string) []string {
-		for i := 0; i < len(in); i++ {
-			in[i] = permute(in[i])
-		}
-		return in
-	}
-
-	for _, constraint := range circ.gateMap {
-
-		if constraint.value.Op == IN {
-			constraint.value.Out = permute(constraint.value.Out)
-			continue
-		}
-
-		if b, n, in := isFunction(constraint.value.Out); b {
-			constraint.value.Out = composeNewFunction(n, permuteListe(in))
-			constraint.value.Inputs = permuteListe(in)
-		}
-		if b, n, in := isFunction(constraint.value.V1); b {
-			constraint.value.V1 = composeNewFunction(n, permuteListe(in))
-			constraint.value.Inputs = permuteListe(in)
-		}
-		if b, n, in := isFunction(constraint.value.V2); b {
-			constraint.value.V2 = composeNewFunction(n, permuteListe(in))
-			constraint.value.Inputs = permuteListe(in)
-		}
-
-		constraint.value.V1 = permute(constraint.value.V1)
-		constraint.value.V2 = permute(constraint.value.V2)
-
-	}
-	return
-}
+//func (circ *Circuit) renameInputs(inputs []string) {
+//	if len(inputs) != len(circ.Inputs) {
+//		panic("given inputs != circuit.Inputs")
+//	}
+//	mapping := make(map[string]string)
+//	for i := 0; i < len(inputs); i++ {
+//		if _, ex := circ.gateMap[inputs[i]]; ex {
+//
+//			//this is a tricky part. So we replace former inputs with the new ones, thereby
+//			//it might be, that the new input name has already been used for some output inside the function
+//			//currently I dont know an elegant way how to handle this renaming issue
+//			if circ.gateMap[inputs[i]].value.Op != IN {
+//				panic(fmt.Sprintf("renaming collsion with %s", inputs[i]))
+//			}
+//
+//		}
+//		mapping[circ.Inputs[i]] = inputs[i]
+//	}
+//	//fmt.Println(mapping)
+//	//circ.Inputs = inputs
+//	permute := func(in string) string {
+//		if out, ex := mapping[in]; ex {
+//			return out
+//		}
+//		return in
+//	}
+//
+//	permuteListe := func(in []string) []string {
+//		for i := 0; i < len(in); i++ {
+//			in[i] = permute(in[i])
+//		}
+//		return in
+//	}
+//
+//	for _, constraint := range circ.gateMap {
+//
+//		if constraint.value.Op == IN {
+//			constraint.value.Out = permute(constraint.value.Out)
+//			continue
+//		}
+//
+//		if b, n, in := isFunction(constraint.value.Out); b {
+//			constraint.value.Out = composeNewFunction(n, permuteListe(in))
+//			constraint.value.Inputs = permuteListe(in)
+//		}
+//		if b, n, in := isFunction(constraint.value.V1); b {
+//			constraint.value.V1 = composeNewFunction(n, permuteListe(in))
+//			constraint.value.Inputs = permuteListe(in)
+//		}
+//		if b, n, in := isFunction(constraint.value.V2); b {
+//			constraint.value.V2 = composeNewFunction(n, permuteListe(in))
+//			constraint.value.Inputs = permuteListe(in)
+//		}
+//
+//		constraint.value.V1 = permute(constraint.value.V1)
+//		constraint.value.V2 = permute(constraint.value.V2)
+//
+//	}
+//	return
+//}
 
 func getContextFromVariable(in string) string {
-	if strings.Contains(in, variableIndicationSign) {
-		return strings.Split(in, variableIndicationSign)[0]
-	}
-	return ""
+	//if strings.Contains(in, variableIndicationSign) {
+	//	return strings.Split(in, variableIndicationSign)[0]
+	//}
+	//return ""
+	return strings.Split(in, variableIndicationSign)[0]
 }
 
 func composeNewFunction(fname string, inputs []string) string {

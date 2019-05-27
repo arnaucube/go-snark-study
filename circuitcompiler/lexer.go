@@ -42,7 +42,7 @@ func (ch Token) String() string {
 	case EXP:
 		return "^"
 	case FUNC:
-		return "func"
+		return "def"
 	case IN:
 		return "In"
 	case CONST:

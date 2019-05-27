@@ -14,36 +14,47 @@ func TestProgramm_BuildConstraintTree(t *testing.T) {
 }
 
 func TestNewProgramm(t *testing.T) {
-
 	//flat := `
-	//func do(x):
-	//	e = x * 5
-	//	b = e * 6
-	//	c = b * 7
-	//	f = c * 1
-	//	d = c * f
-	//	out = d * mul(d,e)
 	//
-	//func add(x ,k):
+	//def add(x ,k):
 	//	z = k * x
-	//	out = do(x) + mul(x,z)
+	//	out = 6 + mul(x,z)
 	//
-	//func main(x,z):
-	//	out = do(z) + add(x,x)
+	//def main(x,z):
+	//	out = mul(x,z) - add(x,x)
 	//
-	//func mul(a,b):
+	//def mul(a,b):
 	//	out = a * b
 	//`
 	flat := `
-	func mul(a,b):
-		out = a * b
+	def do(x):
+		e = x * 5
+		b = e * 6
+		c = b * 7
+		f = c * 1
+		d = c * f
+		out = d * mul(d,e)
 	
-	func main(a):
-		b = a * a
-		c = 4 - b
-		d = 5 * c
-		out =  mul(d,b) /  mul(b,b)
+	def add(x ,k):
+		z = k * x
+		out = do(x) + mul(x,z)
+	
+	def main(x,z):
+		out = do(z) + add(x,x)
+	
+	def mul(a,b):
+		out = a * b
 	`
+	//flat := `
+	//func mul(a,b):
+	//	out = a * b
+	//
+	//func main(a,aa):
+	//	b = a * a
+	//	c = 4 - b
+	//	d = 5 * c
+	//	out =  mul(d,c) /  mul(b,b)
+	//`
 	//flat := `
 	//func main(a,b):
 	//	c = a + b
@@ -52,6 +63,7 @@ func TestNewProgramm(t *testing.T) {
 	//	g = f + 2
 	//	out = g * a
 	//`
+
 	parser := NewParser(strings.NewReader(flat))
 	program, err := parser.Parse()
 
@@ -79,9 +91,9 @@ func TestNewProgramm(t *testing.T) {
 	fmt.Println(a)
 	fmt.Println(b)
 	fmt.Println(c)
-	a1 := big.NewInt(int64(6))
-	//a2 := big.NewInt(int64(5))
-	inputs := []*big.Int{a1}
+	a1 := big.NewInt(int64(7))
+	a2 := big.NewInt(int64(11))
+	inputs := []*big.Int{a1, a2}
 	w := program.CalculateWitness(inputs)
 	fmt.Println("witness")
 	fmt.Println(w)

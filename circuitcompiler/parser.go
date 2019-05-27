@@ -58,7 +58,7 @@ func (p *Parser) parseLine() (*Constraint, error) {
 	c := &Constraint{}
 	tok, lit := p.scanIgnoreWhitespace()
 	switch lit {
-	case "func":
+	case "def":
 		c.Op = FUNC
 		// format: `func name(in):`
 		//todo this is all a bit hacky and unsafe
