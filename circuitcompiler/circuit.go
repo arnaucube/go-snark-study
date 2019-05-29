@@ -70,7 +70,6 @@ func newCircuit(name string) *Circuit {
 
 func (p *Program) addFunction(constraint *Constraint) (c *Circuit) {
 	name := constraint.Out
-	fmt.Println("try to add function ", name)
 
 	b, name2, _ := isFunction(name)
 	if !b {
