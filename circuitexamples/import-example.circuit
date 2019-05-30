@@ -1,0 +1,8 @@
+import "imported-example.circuit"
+
+func main(private s0, public s1):
+	s3 = exp3(s0)
+	s4 = sum(s3, s0)
+	s5 = s4 + 5
+	equals(s1, s5)
+	out = 1 * 1

@@ -24,12 +24,14 @@ syn keyword goSnarkCircuitPrivatePublic		private public
 syn keyword goSnarkCircuitOut	out
 syn keyword goSnarkCircuitEquals	equals
 syn keyword goSnarkCircuitFunction	func
+syn keyword goSnarkCircuitImport	import
 syn match goSnarkCircuitFuncCall /\<\K\k*\ze\s*(/
 syn keyword goSnarkCircuitPrivate private nextgroup=goSnarkCircuitInputName skipwhite
 syn keyword goSnarkCircuitPublic public nextgroup=goSnarkCircuitInputName skipwhite
 syn match goSnarkCircuitInputName '\i\+' contained
 syn match	goSnarkCircuitBraces	   "[{}\[\]]"
 syn match	goSnarkCircuitParens	   "[()]"
+syn region  goSnarkCircuitPath	       start=+"+  skip=+\\\\\|\\"+  end=+"\|$+
 
 syn sync fromstart
 syn sync maxlines=100
@@ -44,12 +46,14 @@ hi def link goSnarkCircuitOpSymbols		Operator
 hi def link goSnarkCircuitFuncCall		Function
 hi def link goSnarkCircuitEquals		Identifier
 hi def link goSnarkCircuitFunction		Keyword
+hi def link goSnarkCircuitImport		Keyword
 hi def link goSnarkCircuitBraces		Function
 hi def link goSnarkCircuitPrivate 		Keyword
 hi def link goSnarkCircuitPublic		Keyword
 hi def link goSnarkCircuitInputName		Special
 hi def link goSnarkCircuitOut   		Special
 hi def link goSnarkCircuitPrivatePublic		Keyword
+hi def link goSnarkCircuitPath                  String
 
 let b:current_syntax = "go-snark-circuit"
 if main_syntax == 'go-snark-circuit'

@@ -1,6 +1,7 @@
 package circuitcompiler
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -115,6 +116,19 @@ func (p *Parser) parseLine() (*Constraint, error) {
 	if c.Literal == "return" {
 		_, varToReturn := p.scanIgnoreWhitespace()
 		c.Out = varToReturn
+		return c, nil
+	}
+	if c.Literal == "import" {
+		line, err := p.s.r.ReadString('\n')
+		if err != nil {
+			return c, err
+		}
+		// read string inside " "
+		path := strings.TrimLeft(strings.TrimRight(line, `"`), `"`)
+		path = strings.Replace(path, `"`, "", -1)
+		path = strings.Replace(path, " ", "", -1)
+		path = strings.Replace(path, "\n", "", -1)
+		c.Out = path
 		return c, nil
 	}
 
@@ -301,6 +315,15 @@ func (p *Parser) Parse() (*Circuit, error) {
 			callsCount++
 			continue
 
+		}
+		if constraint.Literal == "import" {
+			circuitFile, err := os.Open(constraint.Out)
+			if err != nil {
+				panic(errors.New("imported path error: " + constraint.Out))
+			}
+			parser := NewParser(bufio.NewReader(circuitFile))
+			_, err = parser.Parse() // this will add the imported file funcs into the `circuits` map
+			continue
 		}
 
 		circuits[currCircuit].Constraints = append(circuits[currCircuit].Constraints, *constraint)

@@ -32,7 +32,7 @@ Minimal complete flow implementation:
 
 Improvements from the minimal implementation:
 - [x] allow to call functions in circuits language
-- [ ] allow `import` in circuits language
+- [x] allow `import` in circuits language
 - [ ] allow `for` in circuits language
 - [ ] move witness values calculation outside the setup phase
 - [ ] Groth16
