@@ -2,12 +2,13 @@ package snark
 
 import (
 	"fmt"
+	"github.com/arnaucube/go-snark/circuitcompiler"
 	"math/big"
 	"os"
 
-	"github.com/mottla/go-snark/bn128"
-	"github.com/mottla/go-snark/fields"
-	"github.com/mottla/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark/bn128"
+	"github.com/arnaucube/go-snark/fields"
+	"github.com/arnaucube/go-snark/r1csqap"
 )
 
 // Setup is the data structure holding the Trusted Setup data. The Setup.Toxic sub struct must be destroyed after the GenerateTrustedSetup function is completed
@@ -27,7 +28,8 @@ type Setup struct {
 	// public
 	G1T [][3]*big.Int    // t encrypted in G1 curve, G1T == Pk.H
 	G2T [][3][2]*big.Int // t encrypted in G2 curve
-	Pk  struct {         // Proving Key pk:=(pkA, pkB, pkC, pkH)
+	Pk  struct {
+		// Proving Key pk:=(pkA, pkB, pkC, pkH)
 		A  [][3]*big.Int
 		B  [][3][2]*big.Int
 		C  [][3]*big.Int
@@ -352,4 +354,23 @@ func VerifyProof(setup Setup, proof Proof, publicSignals []*big.Int, debug bool)
 	}
 
 	return true
+}
+
+//TODO this is just a workaround to place the output after the input signals. Will be removed once the handling of private variables is already considered in the lexer
+func RelocateOutput(numberOfInputs int, r1cs circuitcompiler.R1CS, witness []*big.Int) (r circuitcompiler.R1CS, w []*big.Int) {
+	tmpA, tmpB, tmpC := [][]*big.Int{}, [][]*big.Int{}, [][]*big.Int{}
+
+	tmpA = append(tmpA, r1cs.A[len(r1cs.A)-1])
+	tmpA = append(tmpA, r1cs.A[:len(r1cs.A)-1]...)
+
+	tmpB = append(tmpB, r1cs.B[len(r1cs.B)-1])
+	tmpB = append(tmpB, r1cs.B[:len(r1cs.B)-1]...)
+
+	tmpC = append(tmpC, r1cs.C[len(r1cs.C)-1])
+	tmpC = append(tmpC, r1cs.C[:len(r1cs.C)-1]...)
+
+	wtmp := append(witness[:numberOfInputs], witness[len(witness)-1])
+	wtmp = append(wtmp, witness[numberOfInputs:len(witness)-2]...)
+
+	return circuitcompiler.R1CS{A: tmpA, B: tmpB, C: tmpC}, wtmp
 }

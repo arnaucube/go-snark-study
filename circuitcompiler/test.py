@@ -38,21 +38,21 @@
 #     g = f + 2
 #     return g * a
 
-def doSomething(x ,k):
-    z = k * x
-    return 6 + mul(x,z)
+##############################
+# def doSomething(x ,k):
+#     z = k * x
+#     return 6 + mul(x,z)
+#
+# def mul(a,b):
+#     return a * b
+#
+# def main():
+#     x=64341
+#     z=76548465
+#
+#     print(mul(x,z) - doSomething(x,x))
 
-# def main(x,z):
-#     out =
-
-def mul(a,b):
-    return a * b
-
-def main():
-    x=64341
-    z=76548465
-
-    print(mul(x,z) - doSomething(x,x))
+#######################
 #
 # def mul(a,b):
 #     return a * b
@@ -62,7 +62,24 @@ def main():
 #     c = 4 - b
 #     d = 5 * c
 #     return  mul(d,c) /  mul(b,b)
+############################
+
+def go(a,b,c,d):
+    e = a * b
+    f = c * d
+    g = e * f
+    h = g / e
+    i = h * 5
+    return  g * i
+
+def main():
+    print(go(3,5,7,11))
 
 if __name__ == '__main__':
     #pascal(8)
     main()
+
+
+    [[0 1 0 0 0 0 0 0 0 0] [0 0 0 1 0 0 0 0 0 0] [0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 0 0 1 0] [0 0 0 0 0 0 0 1 0 0]]
+    [[0 0 1 0 0 0 0 0 0 0] [0 0 0 0 1 0 0 0 0 0] [0 0 0 0 0 0 1 0 0 0] [0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 0 0 5 0]]
+    [[0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 1 0 0 0] [0 0 0 0 0 0 0 1 0 0] [0 0 0 0 0 0 0 1 0 0] [0 0 0 0 0 0 0 0 0 1]]

@@ -2,10 +2,9 @@ package r1csqap
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 
-	"github.com/mottla/go-snark/fields"
+	"github.com/arnaucube/go-snark/fields"
 )
 
 // Transpose transposes the *big.Int matrix
@@ -173,9 +172,6 @@ func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) (alphas [][]*big.Int, 
 	aT := Transpose(a)
 	bT := Transpose(b)
 	cT := Transpose(c)
-	fmt.Println(aT)
-	fmt.Println(bT)
-	fmt.Println(cT)
 
 	for i := 0; i < len(aT); i++ {
 		alphas = append(alphas, pf.LagrangeInterpolation(aT[i]))

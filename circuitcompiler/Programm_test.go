@@ -32,6 +32,9 @@ var correctnesTest = []TraceCorrectnessTest{
 			result: bigNumberResult1,
 		}},
 		code: `
+	def main( x  ,  z ) :
+		out = do(z) + add(x,x)
+
 	def do(x):
 		e = x * 5
 		b = e * 6
@@ -44,9 +47,7 @@ var correctnesTest = []TraceCorrectnessTest{
 		z = k * x
 		out = do(x) + mul(x,z)
 	
-	def main(x,z):
-		out = do(z) + add(x,x)
-	
+
 	def mul(a,b):
 		out = a * b
 	`,
@@ -98,21 +99,24 @@ var correctnesTest = []TraceCorrectnessTest{
 		out = g * a
 	`,
 	},
+	{
+		io: []InOut{{
+			inputs: []*big.Int{big.NewInt(int64(3)), big.NewInt(int64(5)), big.NewInt(int64(7)), big.NewInt(int64(11))},
+			result: big.NewInt(int64(444675)),
+		}},
+		code: `
+	def main(a,b,c,d):
+		e = a * b
+		f = c * d
+		g = e * f
+		h = g / e
+		i = h * 5
+		out = g * i
+	`,
+	},
 }
 
 func TestNewProgramm(t *testing.T) {
-	//flat := `
-	//
-	//def doSomething(x ,k):
-	//	z = k * x
-	//	out = 6 + mul(x,z)
-	//
-	//def main(x,z):
-	//	out = mul(x,z) - doSomething(x,x)
-	//
-	//def mul(a,b):
-	//	out = a * b
-	//`
 
 	for _, test := range correctnesTest {
 		parser := NewParser(strings.NewReader(test.code))

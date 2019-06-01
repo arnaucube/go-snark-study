@@ -3,9 +3,9 @@ package circuitcompiler
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/mottla/go-snark/bn128"
-	"github.com/mottla/go-snark/fields"
-	"github.com/mottla/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark/bn128"
+	"github.com/arnaucube/go-snark/fields"
+	"github.com/arnaucube/go-snark/r1csqap"
 	"hash"
 	"math/big"
 	"sync"
@@ -41,6 +41,10 @@ type Program struct {
 	computedFactors map[string]string
 }
 
+func (p *Program) GlobalInputCount() int {
+	return len(p.globalInputs)
+}
+
 func (p *Program) PrintContraintTrees() {
 	for k, v := range p.functions {
 		fmt.Println(k)
@@ -52,6 +56,7 @@ func (p *Program) BuildConstraintTrees() {
 
 	mainRoot := p.getMainCircuit().root
 
+	//if our programs last operation is not a multiplication gate, we need to introduce on
 	if mainRoot.value.Op&(MINUS|PLUS) != 0 {
 		newOut := Constraint{Out: "out", V1: "1", V2: "out2", Op: MULTIPLY}
 		p.getMainCircuit().addConstraint(&newOut)
@@ -64,6 +69,7 @@ func (p *Program) BuildConstraintTrees() {
 	}
 	var wg = sync.WaitGroup{}
 
+	//we build the parse trees concurrently! because we can! go rocks
 	for _, circuit := range p.functions {
 		wg.Add(1)
 		//interesting: if circuit is not passed as argument, the program fails. duno why..
@@ -87,11 +93,10 @@ func (c *Circuit) buildTree(g *gate) {
 		panic(fmt.Sprintf("undefined variable %s", g.value.Out))
 	}
 	if g.OperationType() == FUNC {
-		//g.funcInputs = []*gate{}
+
 		for _, in := range g.value.Inputs {
 			if gate, ex := c.gateMap[in]; ex {
 				g.funcInputs = append(g.funcInputs, gate)
-				//note that we do repeated work here. the argument
 				c.buildTree(gate)
 			} else {
 				panic(fmt.Sprintf("undefined argument %s", g.value.V1))
@@ -115,7 +120,6 @@ func (c *Circuit) buildTree(g *gate) {
 }
 
 func (p *Program) ReduceCombinedTree() (orderedmGates []gate) {
-	//mGatesUsed := make(map[string]bool)
 	orderedmGates = []gate{}
 	p.computedInContext = make(map[string]map[string]string)
 	p.computedFactors = make(map[string]string)
@@ -128,7 +132,6 @@ func (p *Program) ReduceCombinedTree() (orderedmGates []gate) {
 //recursively walks through the parse tree to create a list of all
 //multiplication gates needed for the QAP construction
 //Takes into account, that multiplication with constants and addition (= substraction) can be reduced, and does so
-//TODO if the same variable that has been computed in context A, is needed again but from a different context b, will be recomputed and not reused
 func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTraceBuildup []byte, orderedmGates *[]gate, negate bool, invert bool) (facs []factor, hashTraceResult []byte, variableEnd bool) {
 
 	if node.OperationType() == CONST {

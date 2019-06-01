@@ -2,57 +2,13 @@ package snark
 
 import (
 	"fmt"
-	"github.com/mottla/go-snark/circuitcompiler"
-	"github.com/mottla/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark/circuitcompiler"
+	"github.com/arnaucube/go-snark/r1csqap"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"strings"
 	"testing"
 )
-
-func TestGenerateProofs(t *testing.T) {
-	z := []*big.Int{big.NewInt(int64(1))}
-	for i := 1; i < 6; i++ {
-		z = Utils.PF.Mul(
-			z,
-			[]*big.Int{
-				Utils.PF.F.Neg(
-					big.NewInt(int64(i))),
-				big.NewInt(int64(1)),
-			})
-	}
-	fmt.Println(z)
-	for i := 0; i < 7; i++ {
-		fmt.Println(Utils.PF.Eval(z, big.NewInt(int64(i))))
-	}
-
-	z = []*big.Int{big.NewInt(int64(1))}
-	for i := 1; i < 6; i++ {
-		z = Utils.PF.Mul(
-			z,
-			[]*big.Int{
-				big.NewInt(int64(i)),
-				big.NewInt(int64(1)),
-			})
-
-	}
-	fmt.Println(z)
-	z = []*big.Int{
-		big.NewInt(int64(1)),
-		big.NewInt(int64(
-			-3)),
-	}
-	z = Utils.PF.Mul(
-		z,
-		[]*big.Int{
-			big.NewInt(int64(1)),
-			big.NewInt(int64(3)),
-		})
-	fmt.Println(z)
-	fmt.Println(Utils.PF.F.Neg(
-		big.NewInt(int64(1))))
-	fmt.Println(Utils.PF.F.Inverse(big.NewInt(int64(1))))
-}
 
 func TestNewProgramm(t *testing.T) {
 
@@ -86,27 +42,30 @@ func TestNewProgramm(t *testing.T) {
 
 	fmt.Println("generating R1CS")
 	r1cs := program.GenerateReducedR1CS(gates)
-	a, b, c := r1cs.A, r1cs.B, r1cs.C
-	fmt.Println(a)
-	fmt.Println(b)
-	fmt.Println(c)
+	//[[0 1 0 0 0 0 0 0 0 0] [0 0 0 1 0 0 0 0 0 0] [0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 0 0 1 0] [0 0 0 0 0 0 0 1 0 0]]
+	//[[0 0 1 0 0 0 0 0 0 0] [0 0 0 0 1 0 0 0 0 0] [0 0 0 0 0 0 1 0 0 0] [0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 0 0 5 0]]
+	//[[0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 1 0 0 0] [0 0 0 0 0 0 0 1 0 0] [0 0 0 0 0 0 0 1 0 0] [0 0 0 0 0 0 0 0 0 1]]
 	a1 := big.NewInt(int64(6))
 	a2 := big.NewInt(int64(5))
 	inputs := []*big.Int{a1, a2, a1, a2}
 	w := circuitcompiler.CalculateWitness(inputs, r1cs)
-	fmt.Println("witness")
-	fmt.Println(w)
+
+	r1csReordered, wReordered := RelocateOutput(program.GlobalInputCount(), r1cs, w)
+
+	a, b, c := r1csReordered.A, r1csReordered.B, r1csReordered.C
+	fmt.Println(a)
+	fmt.Println(b)
+	fmt.Println(c)
 
 	// R1CS to QAP
 	alphas, betas, gammas, domain := Utils.PF.R1CSToQAP(a, b, c)
-	fmt.Println("qap")
+	fmt.Println("QAP array lengths")
 	fmt.Println("alphas", len(alphas))
-	fmt.Println("alphas", alphas)
 	fmt.Println("betas", len(betas))
 	fmt.Println("gammas", len(gammas))
 	fmt.Println("domain polynomial ", len(domain))
 
-	ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
+	ax, bx, cx, px := Utils.PF.CombinePolynomials(wReordered, alphas, betas, gammas)
 	fmt.Println("ax length", len(ax))
 	fmt.Println("bx length", len(bx))
 	fmt.Println("cx length", len(cx))
@@ -147,7 +106,7 @@ func TestNewProgramm(t *testing.T) {
 	// fmt.Println("zxQAP", len(zxQAP))
 
 	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	proof, err := GenerateProofs(setup, 5, w, px)
+	proof, err := GenerateProofs(setup, program.GlobalInputCount(), wReordered, px)
 	assert.Nil(t, err)
 
 	// fmt.Println("\n proofs:")
@@ -155,11 +114,12 @@ func TestNewProgramm(t *testing.T) {
 
 	// fmt.Println("public signals:", proof.PublicSignals)
 	fmt.Println("\nwitness", w)
+	fmt.Println("\nwitness Reordered ", wReordered)
 	// b1 := big.NewInt(int64(1))
 	//b35 := big.NewInt(int64(35))
 	//// publicSignals := []*big.Int{b1, b35}
 	//publicSignals := []*big.Int{b35}
 	//before := time.Now()
-	assert.True(t, VerifyProof(setup, proof, w[:5], true))
+	assert.True(t, VerifyProof(setup, proof, wReordered[:program.GlobalInputCount()], true))
 	//fmt.Println("verify proof time elapsed:", time.Since(before))
 }

@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/mottla/go-snark/fields"
+	"github.com/arnaucube/go-snark/fields"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -110,67 +110,5 @@ func TestLagrangeInterpolation(t *testing.T) {
 	assert.Equal(t, pf.Eval(alpha, big.NewInt(int64(4))), b5)
 	aux := pf.Eval(alpha, big.NewInt(int64(3))).Int64()
 	assert.Equal(t, aux, int64(0))
-
-}
-
-func TestR1CSToQAP(t *testing.T) {
-	// new Finite Field
-	r, ok := new(big.Int).SetString("21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
-	assert.True(nil, ok)
-	f := fields.NewFq(r)
-	// new Polynomial Field
-	pf := NewPolynomialField(f)
-
-	b0 := big.NewInt(int64(0))
-	b1 := big.NewInt(int64(1))
-	b3 := big.NewInt(int64(3))
-	b5 := big.NewInt(int64(5))
-	b9 := big.NewInt(int64(9))
-	b27 := big.NewInt(int64(27))
-	b30 := big.NewInt(int64(30))
-	b35 := big.NewInt(int64(35))
-	a := [][]*big.Int{
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
-		[]*big.Int{b0, b0, b0, b1, b0, b0},
-		[]*big.Int{b0, b1, b0, b0, b1, b0},
-		[]*big.Int{b5, b0, b0, b0, b0, b1},
-	}
-	b := [][]*big.Int{
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
-		[]*big.Int{b0, b1, b0, b0, b0, b0},
-		[]*big.Int{b1, b0, b0, b0, b0, b0},
-		[]*big.Int{b1, b0, b0, b0, b0, b0},
-	}
-	c := [][]*big.Int{
-		[]*big.Int{b0, b0, b0, b1, b0, b0},
-		[]*big.Int{b0, b0, b0, b0, b1, b0},
-		[]*big.Int{b0, b0, b0, b0, b0, b1},
-		[]*big.Int{b0, b0, b1, b0, b0, b0},
-	}
-	alphas, betas, gammas, zx := pf.R1CSToQAP(a, b, c)
-	// fmt.Println(alphas)
-	// fmt.Println(betas)
-	// fmt.Println(gammas)
-	// fmt.Print("Z(x): ")
-	// fmt.Println(zx)
-
-	w := []*big.Int{b1, b3, b35, b9, b27, b30}
-	ax, bx, cx, px := pf.CombinePolynomials(w, alphas, betas, gammas)
-	// fmt.Println(ax)
-	// fmt.Println(bx)
-	// fmt.Println(cx)
-	// fmt.Println(px)
-
-	hx := pf.DivisorPolynomial(px, zx)
-	// fmt.Println(hx)
-
-	// hx==px/zx so px==hx*zx
-	assert.Equal(t, px, pf.Mul(hx, zx))
-
-	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
-	abc := pf.Sub(pf.Mul(ax, bx), cx)
-	assert.Equal(t, abc, px)
-	hz := pf.Mul(hx, zx)
-	assert.Equal(t, abc, hz)
 
 }
