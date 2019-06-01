@@ -57,7 +57,7 @@ func TestGenerateProofs(t *testing.T) {
 func TestNewProgramm(t *testing.T) {
 
 	flat := `
-	func main(a,b,c,d):
+	def main(a,b,c,d):
 		e = a * b
 		f = c * d
 		g = e * f
@@ -85,14 +85,15 @@ func TestNewProgramm(t *testing.T) {
 	}
 
 	fmt.Println("generating R1CS")
-	a, b, c := program.GenerateReducedR1CS(gates)
+	r1cs := program.GenerateReducedR1CS(gates)
+	a, b, c := r1cs.A, r1cs.B, r1cs.C
 	fmt.Println(a)
 	fmt.Println(b)
 	fmt.Println(c)
 	a1 := big.NewInt(int64(6))
 	a2 := big.NewInt(int64(5))
 	inputs := []*big.Int{a1, a2, a1, a2}
-	w := program.CalculateWitness(inputs)
+	w := circuitcompiler.CalculateWitness(inputs, r1cs)
 	fmt.Println("witness")
 	fmt.Println(w)
 
@@ -120,47 +121,45 @@ func TestNewProgramm(t *testing.T) {
 	// p(x) = a(x) * b(x) - c(x) == h(x) * z(x)
 	abc := Utils.PF.Sub(Utils.PF.Mul(ax, bx), cx)
 	assert.Equal(t, abc, px)
-	hzQAP := Utils.PF.Mul(hxQAP, domain)
-	assert.Equal(t, abc, hzQAP)
 
 	div, rem := Utils.PF.Div(px, domain)
-	assert.Equal(t, hxQAP, div) //not necessary
+	assert.Equal(t, hxQAP, div) //not necessary, since DivisorPolynomial is Div, just discarding 'rem'
 	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(len(px)-len(domain)))
 
 	//calculate trusted setup
-	//setup, err := GenerateTrustedSetup(len(w),alphas, betas, gammas)
-	//assert.Nil(t, err)
-	//fmt.Println("\nt:", setup.Toxic.T)
-	////
-	////// zx and setup.Pk.Z should be the same (currently not, the correct one is the calculation used inside GenerateTrustedSetup function), the calculation is repeated. TODO avoid repeating calculation
+	setup, err := GenerateTrustedSetup(len(w), alphas, betas, gammas)
+	assert.Nil(t, err)
+	fmt.Println("\nt:", setup.Toxic.T)
+	//
+	//// zx and setup.Pk.Z should be the same (currently not, the correct one is the calculation used inside GenerateTrustedSetup function), the calculation is repeated. TODO avoid repeating calculation
 	//assert.Equal(t, domain, setup.Pk.Z)
-	//
-	//fmt.Println("hx pk.z", hxQAP)
-	//hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z)
-	//fmt.Println("hx pk.z", hx)
-	//// assert.Equal(t, hxQAP, hx)
-	//assert.Equal(t, px, Utils.PF.Mul(hxQAP, zxQAP))
-	//assert.Equal(t, px, Utils.PF.Mul(hx, setup.Pk.Z))
-	//
-	//assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
-	//assert.Equal(t, len(hxQAP), len(px)-len(zxQAP)+1)
-	//// fmt.Println("pk.Z", len(setup.Pk.Z))
-	//// fmt.Println("zxQAP", len(zxQAP))
-	//
-	//// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-	//proof, err := GenerateProofs(*circuit, setup, w, px)
-	//assert.Nil(t, err)
-	//
-	//// fmt.Println("\n proofs:")
-	//// fmt.Println(proof)
-	//
-	//// fmt.Println("public signals:", proof.PublicSignals)
-	//fmt.Println("\nwitness", w)
-	//// b1 := big.NewInt(int64(1))
+
+	fmt.Println("hx pk.z", hxQAP)
+	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z)
+	fmt.Println("hx pk.z", hx)
+	// assert.Equal(t, hxQAP, hx)
+	assert.Equal(t, px, Utils.PF.Mul(hxQAP, domain))
+	assert.Equal(t, px, Utils.PF.Mul(hx, setup.Pk.Z))
+
+	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
+	assert.Equal(t, len(hxQAP), len(px)-len(domain)+1)
+	// fmt.Println("pk.Z", len(setup.Pk.Z))
+	// fmt.Println("zxQAP", len(zxQAP))
+
+	// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
+	proof, err := GenerateProofs(setup, 5, w, px)
+	assert.Nil(t, err)
+
+	// fmt.Println("\n proofs:")
+	// fmt.Println(proof)
+
+	// fmt.Println("public signals:", proof.PublicSignals)
+	fmt.Println("\nwitness", w)
+	// b1 := big.NewInt(int64(1))
 	//b35 := big.NewInt(int64(35))
 	//// publicSignals := []*big.Int{b1, b35}
 	//publicSignals := []*big.Int{b35}
 	//before := time.Now()
-	//assert.True(t, VerifyProof(*circuit, setup, proof, publicSignals, true))
+	assert.True(t, VerifyProof(setup, proof, w[:5], true))
 	//fmt.Println("verify proof time elapsed:", time.Since(before))
 }

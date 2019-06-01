@@ -17,17 +17,28 @@ type utils struct {
 	PF  r1csqap.PolynomialField
 }
 
+type R1CS struct {
+	A [][]*big.Int
+	B [][]*big.Int
+	C [][]*big.Int
+}
 type Program struct {
 	functions             map[string]*Circuit
 	globalInputs          []string
 	arithmeticEnvironment utils //find a better name
 	sha256Hasher          hash.Hash
-	computedInContext     map[string]map[string]string
-	R1CS                  struct {
-		A [][]*big.Int
-		B [][]*big.Int
-		C [][]*big.Int
-	}
+
+	//key 1: the hash chain indicating from where the variable is called H( H(main(a,b)) , doSomething(x,z) ), where H is a hash function.
+	//value 1 : map
+	//			with key variable name
+	//			with value variable name + hash Chain
+	//this datastructure is nice but maybe ill replace it later with something less confusing
+	//it serves the elementary purpose of not computing a variable a second time
+	computedInContext map[string]map[string]string
+
+	//to reduce the number of multiplication gates, we store each factor signature, and the variable name,
+	//so each time a variable is computed, that happens to have the very same factors, we reuse the former gate
+	computedFactors map[string]string
 }
 
 func (p *Program) PrintContraintTrees() {
@@ -48,9 +59,6 @@ func (p *Program) BuildConstraintTrees() {
 		p.getMainCircuit().gateMap[mainRoot.value.Out] = mainRoot
 	}
 
-	//for _, in := range p.getMainCircuit().Inputs {
-	//	p.globalInputs = append(p.globalInputs, composeNewFunction(in, p.getMainCircuit().Inputs))
-	//}
 	for _, in := range p.getMainCircuit().Inputs {
 		p.globalInputs = append(p.globalInputs, in)
 	}
@@ -58,10 +66,11 @@ func (p *Program) BuildConstraintTrees() {
 
 	for _, circuit := range p.functions {
 		wg.Add(1)
-		func() {
-			circuit.buildTree(circuit.root)
+		//interesting: if circuit is not passed as argument, the program fails. duno why..
+		go func(c *Circuit) {
+			c.buildTree(c.root)
 			wg.Done()
-		}()
+		}(circuit)
 
 	}
 	wg.Wait()
@@ -109,12 +118,17 @@ func (p *Program) ReduceCombinedTree() (orderedmGates []gate) {
 	//mGatesUsed := make(map[string]bool)
 	orderedmGates = []gate{}
 	p.computedInContext = make(map[string]map[string]string)
+	p.computedFactors = make(map[string]string)
 	rootHash := []byte{}
 	p.computedInContext[string(rootHash)] = make(map[string]string)
 	p.r1CSRecursiveBuild(p.getMainCircuit(), p.getMainCircuit().root, rootHash, &orderedmGates, false, false)
 	return orderedmGates
 }
 
+//recursively walks through the parse tree to create a list of all
+//multiplication gates needed for the QAP construction
+//Takes into account, that multiplication with constants and addition (= substraction) can be reduced, and does so
+//TODO if the same variable that has been computed in context A, is needed again but from a different context b, will be recomputed and not reused
 func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTraceBuildup []byte, orderedmGates *[]gate, negate bool, invert bool) (facs []factor, hashTraceResult []byte, variableEnd bool) {
 
 	if node.OperationType() == CONST {
@@ -163,6 +177,12 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 			//if !(variableEnd && cons) && !node.value.invert && node != p.getMainCircuit().root {
 			return mulFactors(leftFactors, rightFactors), append(leftHash, rightHash...), variableEnd || cons
 		}
+		sig := factorsSignature(leftFactors, rightFactors)
+		if out, ex := p.computedFactors[sig]; ex {
+			return []factor{{typ: IN, name: out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}, hashTraceBuildup, true
+
+		}
+
 		rootGate := cloneGate(node)
 		rootGate.index = len(*orderedmGates)
 		rootGate.leftIns = leftFactors
@@ -172,6 +192,7 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 		rootGate.value.V2 = rootGate.value.V2 + string(rightHash[:10])
 		rootGate.value.Out = rootGate.value.Out + string(out[:10])
 		p.computedInContext[string(hashTraceBuildup)][node.value.Out] = rootGate.value.Out
+		p.computedFactors[sig] = rootGate.value.Out
 		*orderedmGates = append(*orderedmGates, *rootGate)
 
 		hashTraceBuildup = hashTogether(hashTraceBuildup, []byte(rootGate.value.Out))
@@ -186,7 +207,6 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 		panic("unexpected gate")
 	}
 
-	//TODO optimize if output is not a multipication gate
 }
 
 type factor struct {
@@ -212,6 +232,19 @@ func (f factor) String() string {
 
 func mul2DVector(a, b [2]int) [2]int {
 	return [2]int{a[0] * b[0], a[1] * b[1]}
+}
+
+func factorsSignature(leftFactors, rightFactors []factor) string {
+	hasher.Reset()
+	//not using a kommutative operation here would be better. since a * b = b * a, but H(a,b) != H(b,a)
+	//could use  (g^a)^b == (g^b)^a where g is a generator of some prime field where the dicrete log is known to be hard
+	for _, facLeft := range leftFactors {
+		hasher.Write([]byte(facLeft.String()))
+	}
+	for _, Righ := range rightFactors {
+		hasher.Write([]byte(Righ.String()))
+	}
+	return string(hasher.Sum(nil))[:16]
 }
 
 func mulFactors(leftFactors, rightFactors []factor) (result []factor) {
@@ -248,7 +281,6 @@ func mulFactors(leftFactors, rightFactors []factor) (result []factor) {
 				//continue
 
 			}
-			fmt.Println("dsf")
 			panic("unexpected")
 
 		}
@@ -340,11 +372,6 @@ func (p *Program) getMainCircuit() *Circuit {
 	return p.functions["main"]
 }
 
-//func (p *Program) addGlobalInput(c Constraint) {
-//	c.Out = "main@" + c.Out
-//	p.globalInputs = append(p.globalInputs, c)
-//}
-
 func prepareUtils() utils {
 	bn, err := bn128.NewBn128()
 	if err != nil {
@@ -424,7 +451,7 @@ func NewProgram() (p *Program) {
 }
 
 // GenerateR1CS generates the R1CS polynomials from the Circuit
-func (p *Program) GenerateReducedR1CS(mGates []gate) (a, b, c [][]*big.Int) {
+func (p *Program) GenerateReducedR1CS(mGates []gate) (r1CS R1CS) {
 	// from flat code to R1CS
 
 	offset := len(p.globalInputs)
@@ -440,51 +467,52 @@ func (p *Program) GenerateReducedR1CS(mGates []gate) (a, b, c [][]*big.Int) {
 		indexMap[v.value.Out] = i + offset
 	}
 
-	for _, gate := range mGates {
+	for _, g := range mGates {
 
-		if gate.OperationType() == MULTIPLY {
+		if g.OperationType() == MULTIPLY {
 			aConstraint := r1csqap.ArrayOfBigZeros(size)
 			bConstraint := r1csqap.ArrayOfBigZeros(size)
 			cConstraint := r1csqap.ArrayOfBigZeros(size)
 
-			for _, val := range gate.leftIns {
+			insertValue := func(val factor, arr []*big.Int) {
 				if val.typ != CONST {
 					if _, ex := indexMap[val.name]; !ex {
 						panic(fmt.Sprintf("%v index not found!!!", val.name))
 					}
 				}
-				convertAndInsertFactorAt(aConstraint, val, indexMap[val.name])
-			}
-
-			for _, val := range gate.rightIns {
-				if val.typ != CONST {
-					if _, ex := indexMap[val.name]; !ex {
-						panic(fmt.Sprintf("%v index not found!!!", val.name))
-					}
+				value := new(big.Int).Add(new(big.Int), fractionToField(val.multiplicative))
+				if val.negate {
+					value.Neg(value)
 				}
-
-				convertAndInsertFactorAt(bConstraint, val, indexMap[val.name])
+				//not that index is 0 if its a constant, since 0 is the map default if no entry was found
+				arr[indexMap[val.name]] = value
 			}
 
-			cConstraint[indexMap[gate.value.Out]] = big.NewInt(int64(1))
+			for _, val := range g.leftIns {
+				insertValue(val, aConstraint)
+			}
 
-			if gate.value.invert {
+			for _, val := range g.rightIns {
+				insertValue(val, bConstraint)
+			}
+
+			cConstraint[indexMap[g.value.Out]] = big.NewInt(int64(1))
+
+			if g.value.invert {
 				tmp := aConstraint
 				aConstraint = cConstraint
 				cConstraint = tmp
 			}
-			a = append(a, aConstraint)
-			b = append(b, bConstraint)
-			c = append(c, cConstraint)
+			r1CS.A = append(r1CS.A, aConstraint)
+			r1CS.B = append(r1CS.B, bConstraint)
+			r1CS.C = append(r1CS.C, cConstraint)
 
 		} else {
 			panic("not a m gate")
 		}
 	}
-	p.R1CS.A = a
-	p.R1CS.B = b
-	p.R1CS.C = c
-	return a, b, c
+
+	return
 }
 
 var Utils = prepareUtils()
@@ -494,25 +522,15 @@ func fractionToField(in [2]int) *big.Int {
 
 }
 
-func convertAndInsertFactorAt(arr []*big.Int, val factor, index int) {
-	value := new(big.Int).Add(new(big.Int), fractionToField(val.multiplicative))
+//Calculates the witness (program trace) given some input
+//asserts that R1CS has been computed and is stored in the program p memory calling this function
+func CalculateWitness(input []*big.Int, r1cs R1CS) (witness []*big.Int) {
 
-	if val.negate {
-		value.Neg(value)
-	}
+	//if len(p.globalInputs)-1 != len(input) {
+	//	panic("input do not match the required inputs")
+	//}
 
-	//not that index is 0 if its a constant, since 0 is the map default if no entry was found
-	arr[index] = value
-
-}
-
-func (p *Program) CalculateWitness(input []*big.Int) (witness []*big.Int) {
-
-	if len(p.globalInputs)-1 != len(input) {
-		panic("input do not match the required inputs")
-	}
-
-	witness = r1csqap.ArrayOfBigZeros(len(p.R1CS.A[0]))
+	witness = r1csqap.ArrayOfBigZeros(len(r1cs.A[0]))
 	set := make([]bool, len(witness))
 	witness[0] = big.NewInt(int64(1))
 	set[0] = true
@@ -524,10 +542,10 @@ func (p *Program) CalculateWitness(input []*big.Int) (witness []*big.Int) {
 
 	zero := big.NewInt(int64(0))
 
-	for i := 0; i < len(p.R1CS.A); i++ {
-		gatesLeftInputs := p.R1CS.A[i]
-		gatesRightInputs := p.R1CS.B[i]
-		gatesOutputs := p.R1CS.C[i]
+	for i := 0; i < len(r1cs.A); i++ {
+		gatesLeftInputs := r1cs.A[i]
+		gatesRightInputs := r1cs.B[i]
+		gatesOutputs := r1cs.C[i]
 
 		sumLeft := big.NewInt(int64(0))
 		sumRight := big.NewInt(int64(0))
@@ -583,12 +601,6 @@ func (p *Program) CalculateWitness(input []*big.Int) (witness []*big.Int) {
 
 var hasher = sha256.New()
 
-func hashFactorWithContext(f factor, currentCircuit *Circuit) []byte {
-	hasher.Reset()
-	hasher.Write([]byte(f.name))
-	hasher.Write([]byte(currentCircuit.currentOutputName()))
-	return hasher.Sum(nil)
-}
 func hashTogether(a, b []byte) []byte {
 	hasher.Reset()
 	hasher.Write(a)

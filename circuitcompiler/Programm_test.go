@@ -101,18 +101,18 @@ var correctnesTest = []TraceCorrectnessTest{
 }
 
 func TestNewProgramm(t *testing.T) {
-	flat := `
-	
-	def doSomething(x ,k):
-		z = k * x
-		out = 6 + mul(x,z)
-	
-	def main(x,z):
-		out = mul(x,z) - doSomething(x,x)
-	
-	def mul(a,b):
-		out = a * b
-	`
+	//flat := `
+	//
+	//def doSomething(x ,k):
+	//	z = k * x
+	//	out = 6 + mul(x,z)
+	//
+	//def main(x,z):
+	//	out = mul(x,z) - doSomething(x,x)
+	//
+	//def mul(a,b):
+	//	out = a * b
+	//`
 
 	for _, test := range correctnesTest {
 		parser := NewParser(strings.NewReader(test.code))
@@ -138,16 +138,16 @@ func TestNewProgramm(t *testing.T) {
 		}
 
 		fmt.Println("\n generating R1CS")
-		a, b, c := program.GenerateReducedR1CS(gates)
-		fmt.Println(a)
-		fmt.Println(b)
-		fmt.Println(c)
+		r1cs := program.GenerateReducedR1CS(gates)
+		fmt.Println(r1cs.A)
+		fmt.Println(r1cs.B)
+		fmt.Println(r1cs.C)
 
 		for _, io := range test.io {
 			inputs := io.inputs
 			fmt.Println("input")
 			fmt.Println(inputs)
-			w := program.CalculateWitness(inputs)
+			w := CalculateWitness(inputs, r1cs)
 			fmt.Println("witness")
 			fmt.Println(w)
 			assert.Equal(t, io.result, w[len(w)-1])

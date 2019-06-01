@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/mottla/go-snark/bn128"
-	"github.com/mottla/go-snark/circuitcompiler"
 	"github.com/mottla/go-snark/fields"
 	"github.com/mottla/go-snark/r1csqap"
 )
@@ -246,7 +245,7 @@ func GenerateTrustedSetup(witnessLength int, alphas, betas, gammas [][]*big.Int)
 }
 
 // GenerateProofs generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
-func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, px []*big.Int) (Proof, error) {
+func GenerateProofs(setup Setup, nInputs int, w []*big.Int, px []*big.Int) (Proof, error) {
 	var proof Proof
 	proof.PiA = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 	proof.PiAp = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
@@ -257,12 +256,12 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, 
 	proof.PiH = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 	proof.PiKp = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 
-	for i := circuit.NPublic + 1; i < circuit.NVars; i++ {
+	for i := nInputs; i < len(w)-1; i++ {
 		proof.PiA = Utils.Bn.G1.Add(proof.PiA, Utils.Bn.G1.MulScalar(setup.Pk.A[i], w[i]))
 		proof.PiAp = Utils.Bn.G1.Add(proof.PiAp, Utils.Bn.G1.MulScalar(setup.Pk.Ap[i], w[i]))
 	}
 
-	for i := 0; i < circuit.NVars; i++ {
+	for i := 0; i < len(w); i++ {
 		proof.PiB = Utils.Bn.G2.Add(proof.PiB, Utils.Bn.G2.MulScalar(setup.Pk.B[i], w[i]))
 		proof.PiBp = Utils.Bn.G1.Add(proof.PiBp, Utils.Bn.G1.MulScalar(setup.Pk.Bp[i], w[i]))
 
@@ -284,7 +283,7 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, 
 }
 
 // VerifyProof verifies over the BN128 the Pairings of the Proof
-func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
+func VerifyProof(setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
 	// e(piA, Va) == e(piA', g2)
 	pairingPiaVa := Utils.Bn.Pairing(proof.PiA, setup.Vk.Vka)
 	pairingPiapG2 := Utils.Bn.Pairing(proof.PiAp, Utils.Bn.G2.G)
