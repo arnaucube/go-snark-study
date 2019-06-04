@@ -6,7 +6,6 @@ import (
 	"github.com/arnaucube/go-snark/bn128"
 	"github.com/arnaucube/go-snark/fields"
 	"github.com/arnaucube/go-snark/r1csqap"
-	"hash"
 	"math/big"
 	"sync"
 )
@@ -26,18 +25,19 @@ type Program struct {
 	functions             map[string]*Circuit
 	globalInputs          []string
 	arithmeticEnvironment utils //find a better name
-	sha256Hasher          hash.Hash
 
 	//key 1: the hash chain indicating from where the variable is called H( H(main(a,b)) , doSomething(x,z) ), where H is a hash function.
 	//value 1 : map
 	//			with key variable name
 	//			with value variable name + hash Chain
 	//this datastructure is nice but maybe ill replace it later with something less confusing
-	//it serves the elementary purpose of not computing a variable a second time
+	//it serves the elementary purpose of not computing a variable a second time.
+	//it boosts parse time
 	computedInContext map[string]map[string]string
 
 	//to reduce the number of multiplication gates, we store each factor signature, and the variable name,
-	//so each time a variable is computed, that happens to have the very same factors, we reuse the former gate
+	//so each time a variable is computed, that happens to have the very same factors, we reuse the former
+	//it boost setup and proof time
 	computedFactors map[string]string
 }
 
@@ -239,7 +239,7 @@ func mul2DVector(a, b [2]int) [2]int {
 
 func factorsSignature(leftFactors, rightFactors []factor) string {
 	hasher.Reset()
-	//not using a kommutative operation here would be better. since a * b = b * a, but H(a,b) != H(b,a)
+	//using a commutative operation here would be better. since a * b = b * a, but H(a,b) != H(b,a)
 	//could use  (g^a)^b == (g^b)^a where g is a generator of some prime field where the dicrete log is known to be hard
 	for _, facLeft := range leftFactors {
 		hasher.Write([]byte(facLeft.String()))
@@ -250,6 +250,8 @@ func factorsSignature(leftFactors, rightFactors []factor) string {
 	return string(hasher.Sum(nil))[:16]
 }
 
+//multiplies factor elements and returns the result
+//in case the factors do not hold any constants and all inputs are distinct, the output will be the concatenation of left+right
 func mulFactors(leftFactors, rightFactors []factor) (result []factor) {
 
 	for _, facLeft := range leftFactors {
@@ -284,7 +286,7 @@ func mulFactors(leftFactors, rightFactors []factor) (result []factor) {
 				//continue
 
 			}
-			panic("unexpected")
+			panic("unexpected. If this errror is thrown, its probably brcause a true multiplication gate has been skipped and treated as on with constant multiplication or addition ")
 
 		}
 
@@ -448,7 +450,6 @@ func NewProgram() (p *Program) {
 		functions:             map[string]*Circuit{},
 		globalInputs:          []string{"one"},
 		arithmeticEnvironment: prepareUtils(),
-		sha256Hasher:          sha256.New(),
 	}
 	return
 }
@@ -529,10 +530,6 @@ func fractionToField(in [2]int) *big.Int {
 //asserts that R1CS has been computed and is stored in the program p memory calling this function
 func CalculateWitness(input []*big.Int, r1cs R1CS) (witness []*big.Int) {
 
-	//if len(p.globalInputs)-1 != len(input) {
-	//	panic("input do not match the required inputs")
-	//}
-
 	witness = r1csqap.ArrayOfBigZeros(len(r1cs.A[0]))
 	set := make([]bool, len(witness))
 	witness[0] = big.NewInt(int64(1))
@@ -594,7 +591,9 @@ func CalculateWitness(input []*big.Int, r1cs R1CS) (witness []*big.Int) {
 			b := sumRight.Int64()
 			c := sumOut.Int64()
 			set[index] = true
+			//TODO replace with proper multiplication of b^-1 within the finite field
 			witness[index] = big.NewInt(c / b)
+			//Utils.FqR.Mul(sumOut, Utils.FqR.Inverse(sumRight))
 		}
 
 	}

@@ -1,7 +1,6 @@
 package r1csqap
 
 import (
-	"bytes"
 	"math/big"
 
 	"github.com/arnaucube/go-snark/fields"
@@ -9,13 +8,14 @@ import (
 
 // Transpose transposes the *big.Int matrix
 func Transpose(matrix [][]*big.Int) [][]*big.Int {
-	var r [][]*big.Int
-	for i := 0; i < len(matrix[0]); i++ {
-		var row []*big.Int
-		for j := 0; j < len(matrix); j++ {
-			row = append(row, matrix[j][i])
+	r := make([][]*big.Int, len(matrix[0]))
+	for x, _ := range r {
+		r[x] = make([]*big.Int, len(matrix))
+	}
+	for y, s := range matrix {
+		for x, e := range s {
+			r[x][y] = e
 		}
-		r = append(r, row)
 	}
 	return r
 }
@@ -34,7 +34,7 @@ func BigArraysEqual(a, b []*big.Int) bool {
 		return false
 	}
 	for i := 0; i < len(a); i++ {
-		if !bytes.Equal(a[i].Bytes(), b[i].Bytes()) {
+		if a[i].Cmp(b[i]) != 0 {
 			return false
 		}
 	}
