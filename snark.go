@@ -357,7 +357,9 @@ func VerifyProof(setup Setup, proof Proof, publicSignals []*big.Int, debug bool)
 }
 
 //TODO this is just a workaround to place the output after the input signals. Will be removed once the handling of private variables is already considered in the lexer
-func RelocateOutput(numberOfInputs int, r1cs circuitcompiler.R1CS, witness []*big.Int) (r circuitcompiler.R1CS, w []*big.Int) {
+func moveOutputToBegining(r1cs circuitcompiler.R1CS) (r circuitcompiler.R1CS) {
+	return r1cs
+	// activating this part, causes a huge messup I want to deal with a bit later
 	tmpA, tmpB, tmpC := [][]*big.Int{}, [][]*big.Int{}, [][]*big.Int{}
 
 	tmpA = append(tmpA, r1cs.A[len(r1cs.A)-1])
@@ -369,8 +371,15 @@ func RelocateOutput(numberOfInputs int, r1cs circuitcompiler.R1CS, witness []*bi
 	tmpC = append(tmpC, r1cs.C[len(r1cs.C)-1])
 	tmpC = append(tmpC, r1cs.C[:len(r1cs.C)-1]...)
 
+	return circuitcompiler.R1CS{A: tmpA, B: tmpB, C: tmpC}
+}
+
+//TODO this is just a workaround to place the output after the input signals. Will be removed once the handling of private variables is already considered in the lexer
+func moveWitnessOutputAfterInputs(numberOfInputs int, witness []*big.Int) (w []*big.Int) {
+	return witness
+	// activating this part, causes a huge messup I want to deal with a bit later
 	wtmp := append(witness[:numberOfInputs], witness[len(witness)-1])
 	wtmp = append(wtmp, witness[numberOfInputs:len(witness)-2]...)
 
-	return circuitcompiler.R1CS{A: tmpA, B: tmpB, C: tmpC}, wtmp
+	return wtmp
 }
