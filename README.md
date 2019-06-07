@@ -1,4 +1,4 @@
-# go-snark [![Go Report Card](https://goreportcard.com/badge/github.com/arnaucube/go-snark)](https://goreportcard.com/report/github.com/arnaucube/go-snark) [![Build Status](https://travis-ci.org/arnaucube/go-snark.svg?branch=master)](https://travis-ci.org/arnaucube/go-snark)
+# go-snark [![Go Report Card](https://goreportcard.com/badge/github.com/arnaucube/go-snark)](https://goreportcard.com/report/github.com/arnaucube/go-snark) [![Build Status](https://travis-ci.org/arnaucube/go-snark.svg?branch=master)](https://travis-ci.org/arnaucube/go-snark) [![Gitter](https://badges.gitter.im/go-snark/community.svg)](https://gitter.im/go-snark/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 zkSNARK library implementation in Go
 
