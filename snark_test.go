@@ -143,7 +143,7 @@ func TestGenerateAndVerifyProof(t *testing.T) {
 
 		fmt.Println("generating R1CS")
 		//NOTE MOVE DOES NOTHING CURRENTLY
-		r1cs := moveOutputToBegining(program.GenerateReducedR1CS(gates))
+		r1cs := program.GenerateReducedR1CS(gates)
 		//[[0 1 0 0 0 0 0 0 0 0] [0 0 0 1 0 0 0 0 0 0] [0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 0 0 1 0] [0 0 0 0 0 0 0 1 0 0]]
 		//[[0 0 1 0 0 0 0 0 0 0] [0 0 0 0 1 0 0 0 0 0] [0 0 0 0 0 0 1 0 0 0] [0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 0 0 5 0]]
 		//[[0 0 0 0 0 1 0 0 0 0] [0 0 0 0 0 0 1 0 0 0] [0 0 0 0 0 0 0 1 0 0] [0 0 0 0 0 0 0 1 0 0] [0 0 0 0 0 0 0 0 0 1]]
@@ -163,7 +163,7 @@ func TestGenerateAndVerifyProof(t *testing.T) {
 
 		before := time.Now()
 		//calculate trusted setup
-		setup, err := GenerateTrustedSetup(len(alphas[0]), alphas, betas, gammas)
+		setup, err := GenerateTrustedSetup(program.GlobalInputCount(), alphas, betas, gammas)
 		fmt.Println("Generate CRS time elapsed:", time.Since(before))
 		assert.Nil(t, err)
 		fmt.Println("\nt:", setup.Toxic.T)
@@ -175,11 +175,8 @@ func TestGenerateAndVerifyProof(t *testing.T) {
 			fmt.Println(inputs)
 			w := circuitcompiler.CalculateWitness(inputs, r1cs)
 			fmt.Println("\nwitness", w)
-			//NOTE MOVE DOES NOTHING
-			w = moveWitnessOutputAfterInputs(program.GlobalInputCount(), w)
-			fmt.Println("\nwitness Reordered ", w)
 
-			assert.Equal(t, io.result, w[len(w)-1])
+			assert.Equal(t, io.result, w[program.GlobalInputCount()-1])
 
 			ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
 			fmt.Println("ax length", len(ax))
@@ -219,7 +216,7 @@ func TestGenerateAndVerifyProof(t *testing.T) {
 			assert.Nil(t, err)
 
 			before = time.Now()
-			assert.True(t, VerifyProof(setup, proof, append(w[1:program.GlobalInputCount()], w[len(w)-1]), true))
+			assert.True(t, VerifyProof(setup, proof, w[:program.GlobalInputCount()], true))
 			fmt.Println("verify proof time elapsed:", time.Since(before))
 
 		}

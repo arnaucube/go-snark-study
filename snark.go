@@ -2,7 +2,6 @@ package snark
 
 import (
 	"fmt"
-	"github.com/arnaucube/go-snark/circuitcompiler"
 	"math/big"
 	"os"
 
@@ -91,7 +90,7 @@ func prepareUtils() utils {
 }
 
 // GenerateTrustedSetup generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
-func GenerateTrustedSetup(witnessLength int, alphas, betas, gammas [][]*big.Int) (Setup, error) {
+func GenerateTrustedSetup(inputs int, alphas, betas, gammas [][]*big.Int) (Setup, error) {
 	var setup Setup
 	var err error
 
@@ -174,13 +173,13 @@ func GenerateTrustedSetup(witnessLength int, alphas, betas, gammas [][]*big.Int)
 	setup.Vk.G2Kg = Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, setup.Toxic.Kgamma)
 
 	// for i := 0; i < circuit.NVars; i++ {
-	for i := 0; i < witnessLength; i++ {
+	for i := 0; i < len(alphas); i++ {
 		at := Utils.PF.Eval(alphas[i], setup.Toxic.T)
 		// rhoAat := Utils.Bn.Fq1.Mul(setup.Toxic.RhoA, at)
 		rhoAat := Utils.FqR.Mul(setup.Toxic.RhoA, at)
 		a := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, rhoAat)
 		setup.Pk.A = append(setup.Pk.A, a)
-		if i <= 4 {
+		if i < inputs {
 			setup.Vk.IC = append(setup.Vk.IC, a)
 		}
 
@@ -322,7 +321,7 @@ func VerifyProof(setup Setup, proof Proof, publicSignals []*big.Int, debug bool)
 	// Vkx, to then calculate Vkx+piA
 	vkxpia := setup.Vk.IC[0]
 	for i := 0; i < len(publicSignals); i++ {
-		vkxpia = Utils.Bn.G1.Add(vkxpia, Utils.Bn.G1.MulScalar(setup.Vk.IC[i+1], publicSignals[i]))
+		vkxpia = Utils.Bn.G1.Add(vkxpia, Utils.Bn.G1.MulScalar(setup.Vk.IC[i], publicSignals[i]))
 	}
 
 	// e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2)
@@ -354,32 +353,4 @@ func VerifyProof(setup Setup, proof Proof, publicSignals []*big.Int, debug bool)
 	}
 
 	return true
-}
-
-//TODO this is just a workaround to place the output after the input signals. Will be removed once the handling of private variables is already considered in the lexer
-func moveOutputToBegining(r1cs circuitcompiler.R1CS) (r circuitcompiler.R1CS) {
-	return r1cs
-	// activating this part, causes a huge messup I want to deal with a bit later
-	tmpA, tmpB, tmpC := [][]*big.Int{}, [][]*big.Int{}, [][]*big.Int{}
-
-	tmpA = append(tmpA, r1cs.A[len(r1cs.A)-1])
-	tmpA = append(tmpA, r1cs.A[:len(r1cs.A)-1]...)
-
-	tmpB = append(tmpB, r1cs.B[len(r1cs.B)-1])
-	tmpB = append(tmpB, r1cs.B[:len(r1cs.B)-1]...)
-
-	tmpC = append(tmpC, r1cs.C[len(r1cs.C)-1])
-	tmpC = append(tmpC, r1cs.C[:len(r1cs.C)-1]...)
-
-	return circuitcompiler.R1CS{A: tmpA, B: tmpB, C: tmpC}
-}
-
-//TODO this is just a workaround to place the output after the input signals. Will be removed once the handling of private variables is already considered in the lexer
-func moveWitnessOutputAfterInputs(numberOfInputs int, witness []*big.Int) (w []*big.Int) {
-	return witness
-	// activating this part, causes a huge messup I want to deal with a bit later
-	wtmp := append(witness[:numberOfInputs], witness[len(witness)-1])
-	wtmp = append(wtmp, witness[numberOfInputs:len(witness)-2]...)
-
-	return wtmp
 }

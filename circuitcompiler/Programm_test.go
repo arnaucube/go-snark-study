@@ -154,7 +154,7 @@ func TestNewProgramm(t *testing.T) {
 			w := CalculateWitness(inputs, r1cs)
 			fmt.Println("witness")
 			fmt.Println(w)
-			assert.Equal(t, io.result, w[len(w)-1])
+			assert.Equal(t, io.result, w[len(program.globalInputs)-1])
 		}
 
 	}

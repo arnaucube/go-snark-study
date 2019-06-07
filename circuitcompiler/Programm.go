@@ -24,6 +24,7 @@ type R1CS struct {
 type Program struct {
 	functions             map[string]*Circuit
 	globalInputs          []string
+	globalOutput          map[string]bool
 	arithmeticEnvironment utils //find a better name
 
 	//key 1: the hash chain indicating from where the variable is called H( H(main(a,b)) , doSomething(x,z) ), where H is a hash function.
@@ -67,6 +68,10 @@ func (p *Program) BuildConstraintTrees() {
 	for _, in := range p.getMainCircuit().Inputs {
 		p.globalInputs = append(p.globalInputs, in)
 	}
+	for key, _ := range p.globalOutput {
+		p.globalInputs = append(p.globalInputs, key)
+	}
+	//TODO do the same with the outputs
 	var wg = sync.WaitGroup{}
 
 	//we build the parse trees concurrently! because we can! go rocks
@@ -193,8 +198,14 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 		out := hashTogether(leftHash, rightHash)
 		rootGate.value.V1 = rootGate.value.V1 + string(leftHash[:10])
 		rootGate.value.V2 = rootGate.value.V2 + string(rightHash[:10])
-		rootGate.value.Out = rootGate.value.Out + string(out[:10])
+
+		//note we only check for existence, but not for truth.
+		if _, ex := p.globalOutput[rootGate.value.Out]; !ex {
+			rootGate.value.Out = rootGate.value.Out + string(out[:10])
+		}
+
 		p.computedInContext[string(hashTraceBuildup)][node.value.Out] = rootGate.value.Out
+
 		p.computedFactors[sig] = rootGate.value.Out
 		*orderedmGates = append(*orderedmGates, *rootGate)
 
@@ -449,6 +460,7 @@ func NewProgram() (p *Program) {
 	p = &Program{
 		functions:             map[string]*Circuit{},
 		globalInputs:          []string{"one"},
+		globalOutput:          map[string]bool{"main": true},
 		arithmeticEnvironment: prepareUtils(),
 	}
 	return
@@ -458,7 +470,7 @@ func NewProgram() (p *Program) {
 func (p *Program) GenerateReducedR1CS(mGates []gate) (r1CS R1CS) {
 	// from flat code to R1CS
 
-	offset := len(p.globalInputs)
+	offset := len(p.globalInputs) - len(p.globalOutput)
 	//  one + in1 +in2+... + gate1 + gate2 .. + out
 	size := offset + len(mGates)
 	indexMap := make(map[string]int)
@@ -467,8 +479,11 @@ func (p *Program) GenerateReducedR1CS(mGates []gate) (r1CS R1CS) {
 		indexMap[v] = i
 
 	}
-	for i, v := range mGates {
-		indexMap[v.value.Out] = i + offset
+	for _, v := range mGates {
+		if _, ex := indexMap[v.value.Out]; !ex {
+			indexMap[v.value.Out] = len(indexMap)
+		}
+
 	}
 
 	for _, g := range mGates {

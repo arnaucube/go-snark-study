@@ -6,6 +6,8 @@ import (
 	"github.com/arnaucube/go-snark/fields"
 )
 
+var bigZero = big.NewInt(int64(0))
+
 // Transpose transposes the *big.Int matrix
 func Transpose(matrix [][]*big.Int) [][]*big.Int {
 	r := make([][]*big.Int, len(matrix[0]))
@@ -22,7 +24,7 @@ func Transpose(matrix [][]*big.Int) [][]*big.Int {
 
 // ArrayOfBigZeros creates a *big.Int array with n elements to zero
 func ArrayOfBigZeros(num int) []*big.Int {
-	bigZero := big.NewInt(int64(0))
+
 	var r = make([]*big.Int, num, num)
 	for i := 0; i < num; i++ {
 		r[i] = bigZero
@@ -155,7 +157,11 @@ func (pf PolynomialField) LagrangeInterpolation(v []*big.Int) []*big.Int {
 	// https://en.wikipedia.org/wiki/Lagrange_polynomial
 	var r []*big.Int
 	for i := 0; i < len(v); i++ {
-		r = pf.Add(r, pf.NewPolZeroAt(i+1, len(v), v[i]))
+		//NOTE this comparison gives a huge performance boost
+		if v[i].Cmp(bigZero) != 0 {
+			r = pf.Add(r, pf.NewPolZeroAt(i+1, len(v), v[i]))
+		}
+
 		//r = pf.Mul(v[i], pf.NewPolZeroAt(i+1, len(v), v[i]))
 	}
 	//
