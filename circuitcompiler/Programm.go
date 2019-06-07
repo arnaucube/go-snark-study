@@ -42,8 +42,14 @@ type Program struct {
 	computedFactors map[string]string
 }
 
+//returns the cardinality of all main inputs + 1 for the "one" signal
 func (p *Program) GlobalInputCount() int {
 	return len(p.globalInputs)
+}
+
+//returns the cardinaltiy of the output signals. Current only 1 output possible
+func (p *Program) GlobalOutputCount() int {
+	return len(p.globalOutput)
 }
 
 func (p *Program) PrintContraintTrees() {
@@ -68,10 +74,7 @@ func (p *Program) BuildConstraintTrees() {
 	for _, in := range p.getMainCircuit().Inputs {
 		p.globalInputs = append(p.globalInputs, in)
 	}
-	for key, _ := range p.globalOutput {
-		p.globalInputs = append(p.globalInputs, key)
-	}
-	//TODO do the same with the outputs
+
 	var wg = sync.WaitGroup{}
 
 	//we build the parse trees concurrently! because we can! go rocks
@@ -200,6 +203,7 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 		rootGate.value.V2 = rootGate.value.V2 + string(rightHash[:10])
 
 		//note we only check for existence, but not for truth.
+		//global outputs do not require a hash identifier, since they are unique
 		if _, ex := p.globalOutput[rootGate.value.Out]; !ex {
 			rootGate.value.Out = rootGate.value.Out + string(out[:10])
 		}
@@ -470,14 +474,16 @@ func NewProgram() (p *Program) {
 func (p *Program) GenerateReducedR1CS(mGates []gate) (r1CS R1CS) {
 	// from flat code to R1CS
 
-	offset := len(p.globalInputs) - len(p.globalOutput)
+	offset := len(p.globalInputs)
 	//  one + in1 +in2+... + gate1 + gate2 .. + out
 	size := offset + len(mGates)
 	indexMap := make(map[string]int)
 
 	for i, v := range p.globalInputs {
 		indexMap[v] = i
-
+	}
+	for k, _ := range p.globalOutput {
+		indexMap[k] = len(indexMap)
 	}
 	for _, v := range mGates {
 		if _, ex := indexMap[v.value.Out]; !ex {

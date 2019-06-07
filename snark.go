@@ -90,7 +90,7 @@ func prepareUtils() utils {
 }
 
 // GenerateTrustedSetup generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
-func GenerateTrustedSetup(inputs int, alphas, betas, gammas [][]*big.Int) (Setup, error) {
+func GenerateTrustedSetup(numberInOutSignals int, alphas, betas, gammas [][]*big.Int) (Setup, error) {
 	var setup Setup
 	var err error
 
@@ -179,7 +179,7 @@ func GenerateTrustedSetup(inputs int, alphas, betas, gammas [][]*big.Int) (Setup
 		rhoAat := Utils.FqR.Mul(setup.Toxic.RhoA, at)
 		a := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, rhoAat)
 		setup.Pk.A = append(setup.Pk.A, a)
-		if i < inputs {
+		if i < numberInOutSignals {
 			setup.Vk.IC = append(setup.Vk.IC, a)
 		}
 

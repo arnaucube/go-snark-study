@@ -163,7 +163,7 @@ func TestGenerateAndVerifyProof(t *testing.T) {
 
 		before := time.Now()
 		//calculate trusted setup
-		setup, err := GenerateTrustedSetup(program.GlobalInputCount(), alphas, betas, gammas)
+		setup, err := GenerateTrustedSetup(program.GlobalInputCount()+program.GlobalOutputCount(), alphas, betas, gammas)
 		fmt.Println("Generate CRS time elapsed:", time.Since(before))
 		assert.Nil(t, err)
 		fmt.Println("\nt:", setup.Toxic.T)
@@ -176,7 +176,7 @@ func TestGenerateAndVerifyProof(t *testing.T) {
 			w := circuitcompiler.CalculateWitness(inputs, r1cs)
 			fmt.Println("\nwitness", w)
 
-			assert.Equal(t, io.result, w[program.GlobalInputCount()-1])
+			assert.Equal(t, io.result, w[program.GlobalInputCount()])
 
 			ax, bx, cx, px := Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
 			fmt.Println("ax length", len(ax))
@@ -211,12 +211,13 @@ func TestGenerateAndVerifyProof(t *testing.T) {
 
 			before := time.Now()
 			// piA = g1 * A(t), piB = g2 * B(t), piC = g1 * C(t), piH = g1 * H(t)
-			proof, err := GenerateProofs(setup, program.GlobalInputCount(), w, px)
+			proof, err := GenerateProofs(setup, program.GlobalInputCount()+program.GlobalOutputCount(), w, px)
 			fmt.Println("proof generation time elapsed:", time.Since(before))
 			assert.Nil(t, err)
-
+			fmt.Println(program.GlobalInputCount() + program.GlobalOutputCount())
 			before = time.Now()
-			assert.True(t, VerifyProof(setup, proof, w[:program.GlobalInputCount()], true))
+			Signals := w[:program.GlobalInputCount()+program.GlobalOutputCount()]
+			assert.True(t, VerifyProof(setup, proof, Signals, true))
 			fmt.Println("verify proof time elapsed:", time.Since(before))
 
 		}
