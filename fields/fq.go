@@ -32,35 +32,30 @@ func (fq Fq) One() *big.Int {
 func (fq Fq) Add(a, b *big.Int) *big.Int {
 	r := new(big.Int).Add(a, b)
 	return new(big.Int).Mod(r, fq.Q)
-	// return r
 }
 
 // Double performs a doubling on the Fq
 func (fq Fq) Double(a *big.Int) *big.Int {
 	r := new(big.Int).Add(a, a)
 	return new(big.Int).Mod(r, fq.Q)
-	// return r
 }
 
 // Sub performs a subtraction on the Fq
 func (fq Fq) Sub(a, b *big.Int) *big.Int {
 	r := new(big.Int).Sub(a, b)
 	return new(big.Int).Mod(r, fq.Q)
-	// return r
 }
 
 // Neg performs a negation on the Fq
 func (fq Fq) Neg(a *big.Int) *big.Int {
 	m := new(big.Int).Neg(a)
 	return new(big.Int).Mod(m, fq.Q)
-	// return m
 }
 
 // Mul performs a multiplication on the Fq
 func (fq Fq) Mul(a, b *big.Int) *big.Int {
 	m := new(big.Int).Mul(a, b)
 	return new(big.Int).Mod(m, fq.Q)
-	// return m
 }
 
 func (fq Fq) MulScalar(base, e *big.Int) *big.Int {
@@ -125,8 +120,6 @@ func (fq Fq) Rand() (*big.Int, error) {
 
 	maxbits := fq.Q.BitLen()
 	b := make([]byte, (maxbits/8)-1)
-	// b := make([]byte, 3)
-	// b := make([]byte, 3)
 	_, err := rand.Read(b)
 	if err != nil {
 		return nil, err
@@ -134,7 +127,7 @@ func (fq Fq) Rand() (*big.Int, error) {
 	r := new(big.Int).SetBytes(b)
 	rq := new(big.Int).Mod(r, fq.Q)
 
-	// return r over q, nil
+	// r over q, nil
 	return rq, nil
 }
 
@@ -169,4 +162,10 @@ func (fq Fq) Equal(a, b *big.Int) bool {
 	aAff := fq.Affine(a)
 	bAff := fq.Affine(b)
 	return bytes.Equal(aAff.Bytes(), bAff.Bytes())
+}
+
+func BigIsOdd(n *big.Int) bool {
+	one := big.NewInt(int64(1))
+	and := new(big.Int).And(n, one)
+	return bytes.Equal(and.Bytes(), big.NewInt(int64(1)).Bytes())
 }
