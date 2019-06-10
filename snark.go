@@ -1,3 +1,5 @@
+// implementation of https://eprint.iacr.org/2013/879.pdf
+
 package snark
 
 import (
@@ -289,7 +291,9 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	pairingPiaVa := Utils.Bn.Pairing(proof.PiA, setup.Vk.Vka)
 	pairingPiapG2 := Utils.Bn.Pairing(proof.PiAp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingPiaVa, pairingPiapG2) {
-		fmt.Println("❌ e(piA, Va) == e(piA', g2), valid knowledge commitment for A")
+		if debug {
+			fmt.Println("❌ e(piA, Va) == e(piA', g2), valid knowledge commitment for A")
+		}
 		return false
 	}
 	if debug {
@@ -300,7 +304,9 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	pairingVbPib := Utils.Bn.Pairing(setup.Vk.Vkb, proof.PiB)
 	pairingPibpG2 := Utils.Bn.Pairing(proof.PiBp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingVbPib, pairingPibpG2) {
-		fmt.Println("❌ e(Vb, piB) == e(piB', g2), valid knowledge commitment for B")
+		if debug {
+			fmt.Println("❌ e(Vb, piB) == e(piB', g2), valid knowledge commitment for B")
+		}
 		return false
 	}
 	if debug {
@@ -311,7 +317,9 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	pairingPicVc := Utils.Bn.Pairing(proof.PiC, setup.Vk.Vkc)
 	pairingPicpG2 := Utils.Bn.Pairing(proof.PiCp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingPicVc, pairingPicpG2) {
-		fmt.Println("❌ e(piC, Vc) == e(piC', g2), valid knowledge commitment for C")
+		if debug {
+			fmt.Println("❌ e(piC, Vc) == e(piC', g2), valid knowledge commitment for C")
+		}
 		return false
 	}
 	if debug {
@@ -330,7 +338,9 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 		Utils.Bn.Fq12.Mul(
 			Utils.Bn.Pairing(proof.PiH, setup.Vk.Vkz),
 			Utils.Bn.Pairing(proof.PiC, Utils.Bn.G2.G))) {
-		fmt.Println("❌ e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2), QAP disibility checked")
+		if debug {
+			fmt.Println("❌ e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2), QAP disibility checked")
+		}
 		return false
 	}
 	if debug {

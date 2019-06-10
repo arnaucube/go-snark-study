@@ -3,6 +3,7 @@
 package groth16
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/arnaucube/go-snark/bn128"
@@ -53,8 +54,8 @@ type Setup struct {
 	}
 }
 
-// ProofGroth contains the parameters to proof the zkSNARK
-type ProofGroth struct {
+// Proof contains the parameters to proof the zkSNARK
+type Proof struct {
 	PiA [3]*big.Int
 	PiB [3][2]*big.Int
 	PiC [3]*big.Int
@@ -215,4 +216,87 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	}
 
 	return setup, nil
+}
+
+// GenerateProofs generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
+func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, px []*big.Int) (Proof, error) {
+	var proof Proof
+	proof.PiA = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
+	proof.PiB = Utils.Bn.Fq6.Zero()
+	proof.PiC = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
+
+	r, err := Utils.FqR.Rand()
+	if err != nil {
+		return Proof{}, err
+	}
+	s, err := Utils.FqR.Rand()
+	if err != nil {
+		return Proof{}, err
+	}
+
+	// piBG1 will hold all the same than proof.PiB but in G1 curve
+	piBG1 := [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
+
+	for i := 0; i < circuit.NVars; i++ {
+		proof.PiA = Utils.Bn.G1.Add(proof.PiA, Utils.Bn.G1.MulScalar(setup.Pk.G1.At[i], w[i]))
+		piBG1 = Utils.Bn.G1.Add(piBG1, Utils.Bn.G1.MulScalar(setup.Pk.G1.BACGamma[i], w[i]))
+		proof.PiB = Utils.Bn.G2.Add(proof.PiB, Utils.Bn.G2.MulScalar(setup.Pk.G2.BACGamma[i], w[i]))
+	}
+	for i := circuit.NPublic + 1; i < circuit.NVars; i++ {
+		proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(setup.Pk.BACDelta[i], w[i]))
+	}
+
+	// piA = (Σ from 0 to m (pk.A * w[i])) + pk.Alpha1 + r * δ
+	proof.PiA = Utils.Bn.G1.Add(proof.PiA, setup.Pk.G1.Alpha)
+	deltaR := Utils.Bn.G1.MulScalar(setup.Pk.G1.Delta, r)
+	proof.PiA = Utils.Bn.G1.Add(proof.PiA, deltaR)
+
+	// piBG1 = (Σ from 0 to m (pk.B1 * w[i])) + pk.g1.Beta + s * δ
+	// piB = piB2 = (Σ from 0 to m (pk.B2 * w[i])) + pk.g2.Beta + s * δ
+	piBG1 = Utils.Bn.G1.Add(piBG1, setup.Pk.G1.Beta)
+	proof.PiB = Utils.Bn.G2.Add(proof.PiB, setup.Pk.G2.Beta)
+	deltaSG1 := Utils.Bn.G1.MulScalar(setup.Pk.G1.Delta, s)
+	piBG1 = Utils.Bn.G1.Add(piBG1, deltaSG1)
+	deltaSG2 := Utils.Bn.G2.MulScalar(setup.Pk.G2.Delta, s)
+	proof.PiB = Utils.Bn.G2.Add(proof.PiB, deltaSG2)
+
+	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z) // maybe move this calculation to a previous step
+
+	// piC = (Σ from l+1 to m (w[i] * (pk.g1.Beta + pk.g1.Alpha + pk.C)) + h(tau)) / δ) + piA*s + r*piB - r*s*δ
+	for i := 0; i < len(hx); i++ {
+		proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(setup.Pk.PowersTauDelta[i], hx[i]))
+	}
+	proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(proof.PiA, s))
+	proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(piBG1, r))
+	negRS := Utils.FqR.Neg(Utils.FqR.Mul(r, s))
+	proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(setup.Pk.G1.Delta, negRS))
+
+	return proof, nil
+}
+
+// VerifyProof verifies over the BN128 the Pairings of the Proof
+func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
+
+	icPubl := setup.Vk.IC[0]
+	for i := 0; i < len(publicSignals); i++ {
+		icPubl = Utils.Bn.G1.Add(icPubl, Utils.Bn.G1.MulScalar(setup.Vk.IC[i+1], publicSignals[i]))
+	}
+
+	if !Utils.Bn.Fq12.Equal(
+		Utils.Bn.Pairing(proof.PiA, proof.PiB),
+		Utils.Bn.Fq12.Mul(
+			Utils.Bn.Pairing(setup.Vk.G1.Alpha, setup.Vk.G2.Beta),
+			Utils.Bn.Fq12.Mul(
+				Utils.Bn.Pairing(icPubl, setup.Vk.G2.Gamma),
+				Utils.Bn.Pairing(proof.PiC, setup.Vk.G2.Delta)))) {
+		if debug {
+			fmt.Println("❌ groth16 verification not passed")
+		}
+		return false
+	}
+	if debug {
+		fmt.Println("✓ groth16 verification passed")
+	}
+
+	return true
 }
