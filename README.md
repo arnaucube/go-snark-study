@@ -5,14 +5,17 @@ zkSNARK library implementation in Go
 
 - `Succinct Non-Interactive Zero Knowledge for a von Neumann Architecture`, Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza https://eprint.iacr.org/2013/879.pdf
 - `Pinocchio: Nearly practical verifiable computation`, Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova https://eprint.iacr.org/2013/279.pdf
+- `On the Size of Pairing-based Non-interactive Arguments`, Jens Groth https://eprint.iacr.org/2016/260.pdf
 
 ## Caution & Warning
-Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) from scratch in Go to understand the concepts. Do not use in production.
+Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) from scratch in Go to understand the concepts. Do not use in production.
 
 Not finished, implementing this in my free time to understand it better, so I don't have much time.
 
-Currently allows to do the complete path with [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) :
-1. compile circuuit
+Currently allows to do the complete path with [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) :
+
+0. write circuit
+1. compile circuit
 2. generate trusted setup
 3. calculate witness
 4. generate proofs
@@ -35,12 +38,13 @@ Improvements from the minimal implementation:
 - [x] allow `import` in circuits language
 - [ ] allow `for` in circuits language
 - [ ] move witness values calculation outside the setup phase
-- [ ] Groth16
+- [x] Groth16
 - [ ] multiple optimizations
 
 
 ## Usage
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark?status.svg)](https://godoc.org/github.com/arnaucube/go-snark) zkSnark
+- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/groth16?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/groth16) zkSnark Groth16
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/bn128?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/bn128) bn128 (more details: https://github.com/arnaucube/go-snark/tree/master/bn128)
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/fields?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/fields) Finite Fields operations
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/r1csqap?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/r1csqap) R1CS to QAP (more details: https://github.com/arnaucube/go-snark/tree/master/r1csqap)
@@ -108,6 +112,16 @@ Having the `proofs.json`, `compiledcircuit.json`, `trustedsetup.json` `publicInp
 > ./go-snark-cli verify
 ```
 This will return a `true` if the proofs are verified, or a `false` if the proofs are not verified.
+
+### Cli using Groth16
+All this process can be done using [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) protocol:
+```
+> ./go-snark-cli compile test.circuit
+> ./go-snark-cli groth16 trustedsetup
+> ./go-snark-cli groth16 genproofs
+> ./go-snark-cli verify
+```
+
 
 
 ### Library usage
@@ -179,6 +193,11 @@ assert.True(t, VerifyProof(*circuit, setup, proof, publicSignalsVerif, true))
 ```
 
 
+## Versions
+History of versions & tags of this project:
+- v0.0.1: zkSnark complete flow working with Pinocchio protocol
+- v0.0.2: circuit language improved (allow function calls and file imports)
+- v0.0.3: Groth16 zkSnark protocol added
 
 ## Test
 ```

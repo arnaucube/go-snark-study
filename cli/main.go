@@ -13,6 +13,7 @@ import (
 
 	snark "github.com/arnaucube/go-snark"
 	"github.com/arnaucube/go-snark/circuitcompiler"
+	"github.com/arnaucube/go-snark/groth16"
 	"github.com/arnaucube/go-snark/r1csqap"
 	"github.com/urfave/cli"
 )
@@ -48,12 +49,37 @@ var commands = []cli.Command{
 		Usage:   "verify the snark proofs",
 		Action:  VerifyProofs,
 	},
+	{
+		Name:    "groth16",
+		Aliases: []string{},
+		Usage:   "use groth16 protocol",
+		Subcommands: []cli.Command{
+			{
+				Name:    "trustedsetup",
+				Aliases: []string{},
+				Usage:   "generate trusted setup for a circuit",
+				Action:  Groth16TrustedSetup,
+			},
+			{
+				Name:    "genproofs",
+				Aliases: []string{},
+				Usage:   "generate the snark proofs",
+				Action:  Groth16GenerateProofs,
+			},
+			{
+				Name:    "verify",
+				Aliases: []string{},
+				Usage:   "verify the snark proofs",
+				Action:  Groth16VerifyProofs,
+			},
+		},
+	},
 }
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "go-snarks-cli"
-	app.Version = "0.0.1-alpha"
+	app.Version = "0.0.3-alpha"
 	app.Flags = []cli.Flag{
 		cli.StringFlag{Name: "config"},
 	}
@@ -315,6 +341,165 @@ func VerifyProofs(context *cli.Context) error {
 	panicErr(err)
 
 	verified := snark.VerifyProof(circuit, trustedsetup, proof, publicSignals, true)
+	if !verified {
+		fmt.Println("ERROR: proofs not verified")
+	} else {
+		fmt.Println("Proofs verified")
+	}
+	return nil
+}
+
+func Groth16TrustedSetup(context *cli.Context) error {
+	// open compiledcircuit.json
+	compiledcircuitFile, err := ioutil.ReadFile("compiledcircuit.json")
+	panicErr(err)
+	var circuit circuitcompiler.Circuit
+	json.Unmarshal([]byte(string(compiledcircuitFile)), &circuit)
+	panicErr(err)
+
+	// read privateInputs file
+	privateInputsFile, err := ioutil.ReadFile("privateInputs.json")
+	panicErr(err)
+	// read publicInputs file
+	publicInputsFile, err := ioutil.ReadFile("publicInputs.json")
+	panicErr(err)
+
+	// parse inputs from inputsFile
+	var inputs circuitcompiler.Inputs
+	err = json.Unmarshal([]byte(string(privateInputsFile)), &inputs.Private)
+	panicErr(err)
+	err = json.Unmarshal([]byte(string(publicInputsFile)), &inputs.Public)
+	panicErr(err)
+
+	// calculate wittness
+	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
+	panicErr(err)
+
+	// R1CS to QAP
+	alphas, betas, gammas, _ := snark.Utils.PF.R1CSToQAP(circuit.R1CS.A, circuit.R1CS.B, circuit.R1CS.C)
+	fmt.Println("qap")
+	fmt.Println(alphas)
+	fmt.Println(betas)
+	fmt.Println(gammas)
+
+	// calculate trusted setup
+	setup, err := groth16.GenerateTrustedSetup(len(w), circuit, alphas, betas, gammas)
+	panicErr(err)
+	fmt.Println("\nt:", setup.Toxic.T)
+
+	// remove setup.Toxic
+	var tsetup groth16.Setup
+	tsetup.Pk = setup.Pk
+	tsetup.Vk = setup.Vk
+
+	// store setup to json
+	jsonData, err := json.Marshal(tsetup)
+	panicErr(err)
+	// store setup into file
+	jsonFile, err := os.Create("trustedsetup.json")
+	panicErr(err)
+	defer jsonFile.Close()
+	jsonFile.Write(jsonData)
+	jsonFile.Close()
+	fmt.Println("Trusted Setup data written to ", jsonFile.Name())
+	return nil
+}
+
+func Groth16GenerateProofs(context *cli.Context) error {
+	// open compiledcircuit.json
+	compiledcircuitFile, err := ioutil.ReadFile("compiledcircuit.json")
+	panicErr(err)
+	var circuit circuitcompiler.Circuit
+	json.Unmarshal([]byte(string(compiledcircuitFile)), &circuit)
+	panicErr(err)
+
+	// open trustedsetup.json
+	trustedsetupFile, err := ioutil.ReadFile("trustedsetup.json")
+	panicErr(err)
+	var trustedsetup groth16.Setup
+	json.Unmarshal([]byte(string(trustedsetupFile)), &trustedsetup)
+	panicErr(err)
+
+	// read privateInputs file
+	privateInputsFile, err := ioutil.ReadFile("privateInputs.json")
+	panicErr(err)
+	// read publicInputs file
+	publicInputsFile, err := ioutil.ReadFile("publicInputs.json")
+	panicErr(err)
+	// parse inputs from inputsFile
+	var inputs circuitcompiler.Inputs
+	err = json.Unmarshal([]byte(string(privateInputsFile)), &inputs.Private)
+	panicErr(err)
+	err = json.Unmarshal([]byte(string(publicInputsFile)), &inputs.Public)
+	panicErr(err)
+
+	// calculate wittness
+	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
+	panicErr(err)
+	fmt.Println("witness", w)
+
+	// flat code to R1CS
+	a := circuit.R1CS.A
+	b := circuit.R1CS.B
+	c := circuit.R1CS.C
+	// R1CS to QAP
+	alphas, betas, gammas, _ := groth16.Utils.PF.R1CSToQAP(a, b, c)
+	_, _, _, px := groth16.Utils.PF.CombinePolynomials(w, alphas, betas, gammas)
+	hx := groth16.Utils.PF.DivisorPolynomial(px, trustedsetup.Pk.Z)
+
+	fmt.Println(circuit)
+	fmt.Println(trustedsetup.Pk.PowersTauDelta)
+	fmt.Println(hx)
+	fmt.Println(w)
+	proof, err := groth16.GenerateProofs(circuit, trustedsetup, w, px)
+	panicErr(err)
+
+	fmt.Println("\n proofs:")
+	fmt.Println(proof)
+
+	// store proofs to json
+	jsonData, err := json.Marshal(proof)
+	panicErr(err)
+	// store proof into file
+	jsonFile, err := os.Create("proofs.json")
+	panicErr(err)
+	defer jsonFile.Close()
+	jsonFile.Write(jsonData)
+	jsonFile.Close()
+	fmt.Println("Proofs data written to ", jsonFile.Name())
+	return nil
+}
+
+func Groth16VerifyProofs(context *cli.Context) error {
+	// open proofs.json
+	proofsFile, err := ioutil.ReadFile("proofs.json")
+	panicErr(err)
+	var proof groth16.Proof
+	json.Unmarshal([]byte(string(proofsFile)), &proof)
+	panicErr(err)
+
+	// open compiledcircuit.json
+	compiledcircuitFile, err := ioutil.ReadFile("compiledcircuit.json")
+	panicErr(err)
+	var circuit circuitcompiler.Circuit
+	json.Unmarshal([]byte(string(compiledcircuitFile)), &circuit)
+	panicErr(err)
+
+	// open trustedsetup.json
+	trustedsetupFile, err := ioutil.ReadFile("trustedsetup.json")
+	panicErr(err)
+	var trustedsetup groth16.Setup
+	json.Unmarshal([]byte(string(trustedsetupFile)), &trustedsetup)
+	panicErr(err)
+
+	// read publicInputs file
+	publicInputsFile, err := ioutil.ReadFile("publicInputs.json")
+	panicErr(err)
+	var publicSignals []*big.Int
+	err = json.Unmarshal([]byte(string(publicInputsFile)), &publicSignals)
+	panicErr(err)
+
+	verified := groth16.VerifyProof(circuit, trustedsetup, proof, publicSignals, true)
 	if !verified {
 		fmt.Println("ERROR: proofs not verified")
 	} else {
