@@ -6,11 +6,13 @@ import (
 	"github.com/arnaucube/go-snark/fields"
 )
 
+// G1 is ...
 type G1 struct {
 	F fields.Fq
 	G [3]*big.Int
 }
 
+// NewG1 is ...
 func NewG1(f fields.Fq, g [2]*big.Int) G1 {
 	var g1 G1
 	g1.F = f
@@ -22,13 +24,17 @@ func NewG1(f fields.Fq, g [2]*big.Int) G1 {
 	return g1
 }
 
+// Zero is ...
 func (g1 G1) Zero() [2]*big.Int {
 	return [2]*big.Int{g1.F.Zero(), g1.F.Zero()}
 }
+
+// IsZero is ...
 func (g1 G1) IsZero(p [3]*big.Int) bool {
 	return g1.F.IsZero(p[2])
 }
 
+// Add is ...
 func (g1 G1) Add(p1, p2 [3]*big.Int) [3]*big.Int {
 
 	// https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates
@@ -88,6 +94,7 @@ func (g1 G1) Add(p1, p2 [3]*big.Int) [3]*big.Int {
 	return [3]*big.Int{x3, y3, z3}
 }
 
+// Neg is ...
 func (g1 G1) Neg(p [3]*big.Int) [3]*big.Int {
 	return [3]*big.Int{
 		p[0],
@@ -95,9 +102,13 @@ func (g1 G1) Neg(p [3]*big.Int) [3]*big.Int {
 		p[2],
 	}
 }
+
+// Sub is ...
 func (g1 G1) Sub(a, b [3]*big.Int) [3]*big.Int {
 	return g1.Add(a, g1.Neg(b))
 }
+
+// Double is ...
 func (g1 G1) Double(p [3]*big.Int) [3]*big.Int {
 
 	// https://en.wikibooks.org/wiki/Cryptography/Prime_Curve/Jacobian_Coordinates
@@ -137,6 +148,7 @@ func (g1 G1) Double(p [3]*big.Int) [3]*big.Int {
 	return [3]*big.Int{x3, y3, z3}
 }
 
+// MulScalar is ...
 func (g1 G1) MulScalar(p [3]*big.Int, e *big.Int) [3]*big.Int {
 	// https://en.wikipedia.org/wiki/Elliptic_curve_point_multiplication#Double-and-add
 	// for more possible implementations see g2.go file, at the function g2.MulScalar()
@@ -154,6 +166,7 @@ func (g1 G1) MulScalar(p [3]*big.Int, e *big.Int) [3]*big.Int {
 	return q
 }
 
+// Affine is ...
 func (g1 G1) Affine(p [3]*big.Int) [2]*big.Int {
 	if g1.IsZero(p) {
 		return g1.Zero()
@@ -169,6 +182,7 @@ func (g1 G1) Affine(p [3]*big.Int) [2]*big.Int {
 	return [2]*big.Int{x, y}
 }
 
+// Equal is ...
 func (g1 G1) Equal(p1, p2 [3]*big.Int) bool {
 	if g1.IsZero(p1) {
 		return g1.IsZero(p2)

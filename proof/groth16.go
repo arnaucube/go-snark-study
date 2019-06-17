@@ -1,19 +1,16 @@
 // implementation of https://eprint.iacr.org/2016/260.pdf
 
-package groth16
+package proof
 
 import (
 	"fmt"
 	"math/big"
 
-	"github.com/arnaucube/go-snark/bn128"
-	"github.com/arnaucube/go-snark/circuitcompiler"
-	"github.com/arnaucube/go-snark/fields"
-	"github.com/arnaucube/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark/circuit"
 )
 
-// Setup is the data structure holding the Trusted Setup data. The Setup.Toxic sub struct must be destroyed after the GenerateTrustedSetup function is completed
-type Setup struct {
+// Groth16Setup is the data structure holding the Trusted Groth16Setup data.
+type Groth16Setup struct {
 	Toxic struct {
 		T      *big.Int // trusted setup secret
 		Kalpha *big.Int
@@ -54,65 +51,43 @@ type Setup struct {
 	}
 }
 
-// Proof contains the parameters to proof the zkSNARK
-type Proof struct {
+// Groth16Proof contains the parameters to proof the zkSNARK
+type Groth16Proof struct {
 	PiA [3]*big.Int
 	PiB [3][2]*big.Int
 	PiC [3]*big.Int
 }
 
-type utils struct {
-	Bn  bn128.Bn128
-	FqR fields.Fq
-	PF  r1csqap.PolynomialField
+// Z is ...
+func (setup *Groth16Setup) Z() []*big.Int {
+	return setup.Pk.Z
 }
 
-// Utils is the data structure holding the BN128, FqR Finite Field over R, PolynomialField, that will be used inside the snarks operations
-var Utils = prepareUtils()
-
-func prepareUtils() utils {
-	bn, err := bn128.NewBn128()
-	if err != nil {
-		panic(err)
-	}
-	// new Finite Field
-	fqR := fields.NewFq(bn.R)
-	// new Polynomial Field
-	pf := r1csqap.NewPolynomialField(fqR)
-
-	return utils{
-		Bn:  bn,
-		FqR: fqR,
-		PF:  pf,
-	}
-}
-
-// GenerateTrustedSetup generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
-func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, alphas, betas, gammas [][]*big.Int) (Setup, error) {
-	var setup Setup
+// Init generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
+func (setup *Groth16Setup) Init(witnessLength int, circuit circuit.Circuit, alphas, betas, gammas [][]*big.Int) error {
 	var err error
 
 	// generate random t value
 	setup.Toxic.T, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 
 	setup.Toxic.Kalpha, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 	setup.Toxic.Kbeta, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 	setup.Toxic.Kgamma, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 	setup.Toxic.Kdelta, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 
 	// z pol
@@ -215,23 +190,23 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 		setup.Vk.IC = append(setup.Vk.IC, g1ic)
 	}
 
-	return setup, nil
+	return nil
 }
 
-// GenerateProofs generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
-func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, px []*big.Int) (Proof, error) {
-	var proof Proof
+// Generate generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
+func (setup Groth16Setup) Generate(circuit circuit.Circuit, w []*big.Int, px []*big.Int) (Proof, error) {
+	proof := &Groth16Proof{}
 	proof.PiA = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 	proof.PiB = Utils.Bn.Fq6.Zero()
 	proof.PiC = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 
 	r, err := Utils.FqR.Rand()
 	if err != nil {
-		return Proof{}, err
+		return &Groth16Proof{}, err
 	}
 	s, err := Utils.FqR.Rand()
 	if err != nil {
-		return Proof{}, err
+		return &Groth16Proof{}, err
 	}
 
 	// piBG1 will hold all the same than proof.PiB but in G1 curve
@@ -274,8 +249,12 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, 
 	return proof, nil
 }
 
-// VerifyProof verifies over the BN128 the Pairings of the Proof
-func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
+// Verify verifies over the BN128 the Pairings of the Proof
+func (setup Groth16Setup) Verify(circuit circuit.Circuit, proof Proof, publicSignals []*big.Int, debug bool) bool {
+	pproof, ok := proof.(*Groth16Proof)
+	if !ok {
+		panic("bad proof")
+	}
 
 	icPubl := setup.Vk.IC[0]
 	for i := 0; i < len(publicSignals); i++ {
@@ -283,12 +262,12 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	}
 
 	if !Utils.Bn.Fq12.Equal(
-		Utils.Bn.Pairing(proof.PiA, proof.PiB),
+		Utils.Bn.Pairing(pproof.PiA, pproof.PiB),
 		Utils.Bn.Fq12.Mul(
 			Utils.Bn.Pairing(setup.Vk.G1.Alpha, setup.Vk.G2.Beta),
 			Utils.Bn.Fq12.Mul(
 				Utils.Bn.Pairing(icPubl, setup.Vk.G2.Gamma),
-				Utils.Bn.Pairing(proof.PiC, setup.Vk.G2.Delta)))) {
+				Utils.Bn.Pairing(pproof.PiC, setup.Vk.G2.Delta)))) {
 		if debug {
 			fmt.Println("❌ groth16 verification not passed")
 		}

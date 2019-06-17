@@ -43,6 +43,7 @@ func (fq6 Fq6) Add(a, b [3][2]*big.Int) [3][2]*big.Int {
 	}
 }
 
+// Double is ...
 func (fq6 Fq6) Double(a [3][2]*big.Int) [3][2]*big.Int {
 	return fq6.Add(a, a)
 }
@@ -94,6 +95,7 @@ func (fq6 Fq6) Mul(a, b [3][2]*big.Int) [3][2]*big.Int {
 	}
 }
 
+// MulScalar is ...
 func (fq6 Fq6) MulScalar(base [3][2]*big.Int, e *big.Int) [3][2]*big.Int {
 	// for more possible implementations see g2.go file, at the function g2.MulScalar()
 
@@ -172,6 +174,7 @@ func (fq6 Fq6) Square(a [3][2]*big.Int) [3][2]*big.Int {
 	}
 }
 
+// Affine is ...
 func (fq6 Fq6) Affine(a [3][2]*big.Int) [3][2]*big.Int {
 	return [3][2]*big.Int{
 		fq6.F.Affine(a[0]),
@@ -179,10 +182,13 @@ func (fq6 Fq6) Affine(a [3][2]*big.Int) [3][2]*big.Int {
 		fq6.F.Affine(a[2]),
 	}
 }
+
+// Equal is ...
 func (fq6 Fq6) Equal(a, b [3][2]*big.Int) bool {
 	return fq6.F.Equal(a[0], b[0]) && fq6.F.Equal(a[1], b[1]) && fq6.F.Equal(a[2], b[2])
 }
 
+// Copy is ...
 func (fq6 Fq6) Copy(a [3][2]*big.Int) [3][2]*big.Int {
 	return [3][2]*big.Int{
 		fq6.F.Copy(a[0]),

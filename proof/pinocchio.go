@@ -1,20 +1,17 @@
 // implementation of https://eprint.iacr.org/2013/879.pdf
 
-package snark
+package proof
 
 import (
 	"fmt"
 	"math/big"
-	"os"
 
-	"github.com/arnaucube/go-snark/bn128"
-	"github.com/arnaucube/go-snark/circuitcompiler"
-	"github.com/arnaucube/go-snark/fields"
-	"github.com/arnaucube/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark/circuit"
 )
 
-// Setup is the data structure holding the Trusted Setup data. The Setup.Toxic sub struct must be destroyed after the GenerateTrustedSetup function is completed
-type Setup struct {
+// PinocchioSetup is the data structure holding the Trusted Setup data.
+// The Setup.Toxic sub struct must be destroyed after the Init function is completed
+type PinocchioSetup struct {
 	Toxic struct {
 		T      *big.Int // trusted setup secret
 		Ka     *big.Int // prover
@@ -25,7 +22,7 @@ type Setup struct {
 		RhoA   *big.Int
 		RhoB   *big.Int
 		RhoC   *big.Int
-	}
+	} `json:"-"`
 
 	// public
 	G1T [][3]*big.Int    // t encrypted in G1 curve, G1T == Pk.H
@@ -52,8 +49,8 @@ type Setup struct {
 	}
 }
 
-// Proof contains the parameters to proof the zkSNARK
-type Proof struct {
+// PinocchioProof contains the parameters to proof the zkSNARK
+type PinocchioProof struct {
 	PiA  [3]*big.Int
 	PiAp [3]*big.Int
 	PiB  [3][2]*big.Int
@@ -65,35 +62,13 @@ type Proof struct {
 	// PublicSignals []*big.Int
 }
 
-type utils struct {
-	Bn  bn128.Bn128
-	FqR fields.Fq
-	PF  r1csqap.PolynomialField
+// Z is ...
+func (setup *PinocchioSetup) Z() []*big.Int {
+	return setup.Pk.Z
 }
 
-// Utils is the data structure holding the BN128, FqR Finite Field over R, PolynomialField, that will be used inside the snarks operations
-var Utils = prepareUtils()
-
-func prepareUtils() utils {
-	bn, err := bn128.NewBn128()
-	if err != nil {
-		panic(err)
-	}
-	// new Finite Field
-	fqR := fields.NewFq(bn.R)
-	// new Polynomial Field
-	pf := r1csqap.NewPolynomialField(fqR)
-
-	return utils{
-		Bn:  bn,
-		FqR: fqR,
-		PF:  pf,
-	}
-}
-
-// GenerateTrustedSetup generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
-func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, alphas, betas, gammas [][]*big.Int) (Setup, error) {
-	var setup Setup
+// Init generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
+func (setup *PinocchioSetup) Init(witnessLength int, circuit circuit.Circuit, alphas, betas, gammas [][]*big.Int) error {
 	var err error
 
 	// input soundness
@@ -110,41 +85,41 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	// generate random t value
 	setup.Toxic.T, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 
 	// k for calculating pi' and Vk
 	setup.Toxic.Ka, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 	setup.Toxic.Kb, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 	setup.Toxic.Kc, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 
 	// generate Kβ (Kbeta) and Kγ (Kgamma)
 	setup.Toxic.Kbeta, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 	setup.Toxic.Kgamma, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 
 	// generate ρ (Rho): ρA, ρB, ρC
 	setup.Toxic.RhoA, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 	setup.Toxic.RhoB, err = Utils.FqR.Rand()
 	if err != nil {
-		return Setup{}, err
+		return err
 	}
 	setup.Toxic.RhoC = Utils.FqR.Mul(setup.Toxic.RhoA, setup.Toxic.RhoB)
 
@@ -203,15 +178,14 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 
 		ktest := Utils.Bn.G1.Affine(Utils.Bn.G1.Add(Utils.Bn.G1.Add(a, bg1), c))
 		if !Utils.Bn.Fq2.Equal(k, ktest) {
-			os.Exit(1)
-			return setup, err
+			return err
 		}
 
 		setup.Pk.Ap = append(setup.Pk.Ap, Utils.Bn.G1.MulScalar(a, setup.Toxic.Ka))
 		setup.Pk.Bp = append(setup.Pk.Bp, Utils.Bn.G1.MulScalar(bg1, setup.Toxic.Kb))
 		setup.Pk.Cp = append(setup.Pk.Cp, Utils.Bn.G1.MulScalar(c, setup.Toxic.Kc))
-		k_ := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, kt)
-		setup.Pk.Kp = append(setup.Pk.Kp, Utils.Bn.G1.MulScalar(k_, setup.Toxic.Kbeta))
+		kk := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, kt)
+		setup.Pk.Kp = append(setup.Pk.Kp, Utils.Bn.G1.MulScalar(kk, setup.Toxic.Kbeta))
 	}
 
 	// z pol
@@ -244,12 +218,12 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 	}
 	setup.G1T = gt1
 
-	return setup, nil
+	return nil
 }
 
-// GenerateProofs generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
-func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, px []*big.Int) (Proof, error) {
-	var proof Proof
+// Generate generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
+func (setup *PinocchioSetup) Generate(circuit circuit.Circuit, w []*big.Int, px []*big.Int) (Proof, error) {
+	proof := &PinocchioProof{}
 	proof.PiA = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 	proof.PiAp = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 	proof.PiB = Utils.Bn.Fq6.Zero()
@@ -285,11 +259,16 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, 
 	return proof, nil
 }
 
-// VerifyProof verifies over the BN128 the Pairings of the Proof
-func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
+// Verify verifies over the BN128 the Pairings of the Proof
+func (setup *PinocchioSetup) Verify(circuit circuit.Circuit, proof Proof, publicSignals []*big.Int, debug bool) bool {
 	// e(piA, Va) == e(piA', g2)
-	pairingPiaVa := Utils.Bn.Pairing(proof.PiA, setup.Vk.Vka)
-	pairingPiapG2 := Utils.Bn.Pairing(proof.PiAp, Utils.Bn.G2.G)
+
+	pproof, ok := proof.(*PinocchioProof)
+	if !ok {
+		panic("bad type")
+	}
+	pairingPiaVa := Utils.Bn.Pairing(pproof.PiA, setup.Vk.Vka)
+	pairingPiapG2 := Utils.Bn.Pairing(pproof.PiAp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingPiaVa, pairingPiapG2) {
 		if debug {
 			fmt.Println("❌ e(piA, Va) == e(piA', g2), valid knowledge commitment for A")
@@ -301,8 +280,8 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	}
 
 	// e(Vb, piB) == e(piB', g2)
-	pairingVbPib := Utils.Bn.Pairing(setup.Vk.Vkb, proof.PiB)
-	pairingPibpG2 := Utils.Bn.Pairing(proof.PiBp, Utils.Bn.G2.G)
+	pairingVbPib := Utils.Bn.Pairing(setup.Vk.Vkb, pproof.PiB)
+	pairingPibpG2 := Utils.Bn.Pairing(pproof.PiBp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingVbPib, pairingPibpG2) {
 		if debug {
 			fmt.Println("❌ e(Vb, piB) == e(piB', g2), valid knowledge commitment for B")
@@ -314,8 +293,8 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 	}
 
 	// e(piC, Vc) == e(piC', g2)
-	pairingPicVc := Utils.Bn.Pairing(proof.PiC, setup.Vk.Vkc)
-	pairingPicpG2 := Utils.Bn.Pairing(proof.PiCp, Utils.Bn.G2.G)
+	pairingPicVc := Utils.Bn.Pairing(pproof.PiC, setup.Vk.Vkc)
+	pairingPicpG2 := Utils.Bn.Pairing(pproof.PiCp, Utils.Bn.G2.G)
 	if !Utils.Bn.Fq12.Equal(pairingPicVc, pairingPicpG2) {
 		if debug {
 			fmt.Println("❌ e(piC, Vc) == e(piC', g2), valid knowledge commitment for C")
@@ -334,10 +313,10 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 
 	// e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2)
 	if !Utils.Bn.Fq12.Equal(
-		Utils.Bn.Pairing(Utils.Bn.G1.Add(vkxpia, proof.PiA), proof.PiB), // TODO Add(vkxpia, proof.PiA) can go outside in order to save computation, as is reused later
+		Utils.Bn.Pairing(Utils.Bn.G1.Add(vkxpia, pproof.PiA), pproof.PiB), // TODO Add(vkxpia, proof.PiA) can go outside in order to save computation, as is reused later
 		Utils.Bn.Fq12.Mul(
-			Utils.Bn.Pairing(proof.PiH, setup.Vk.Vkz),
-			Utils.Bn.Pairing(proof.PiC, Utils.Bn.G2.G))) {
+			Utils.Bn.Pairing(pproof.PiH, setup.Vk.Vkz),
+			Utils.Bn.Pairing(pproof.PiC, Utils.Bn.G2.G))) {
 		if debug {
 			fmt.Println("❌ e(Vkx+piA, piB) == e(piH, Vkz) * e(piC, g2), QAP disibility checked")
 		}
@@ -349,11 +328,11 @@ func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publ
 
 	// e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB)
 	// == e(piK, g2Kgamma)
-	piApiC := Utils.Bn.G1.Add(Utils.Bn.G1.Add(vkxpia, proof.PiA), proof.PiC)
-	pairingPiACG2Kbg := Utils.Bn.Pairing(piApiC, setup.Vk.G2Kbg)
-	pairingG1KbgPiB := Utils.Bn.Pairing(setup.Vk.G1Kbg, proof.PiB)
+	piapic := Utils.Bn.G1.Add(Utils.Bn.G1.Add(vkxpia, pproof.PiA), pproof.PiC)
+	pairingPiACG2Kbg := Utils.Bn.Pairing(piapic, setup.Vk.G2Kbg)
+	pairingG1KbgPiB := Utils.Bn.Pairing(setup.Vk.G1Kbg, pproof.PiB)
 	pairingL := Utils.Bn.Fq12.Mul(pairingPiACG2Kbg, pairingG1KbgPiB)
-	pairingR := Utils.Bn.Pairing(proof.PiKp, setup.Vk.G2Kg)
+	pairingR := Utils.Bn.Pairing(pproof.PiKp, setup.Vk.G2Kg)
 	if !Utils.Bn.Fq12.Equal(pairingL, pairingR) {
 		fmt.Println("❌ e(Vkx+piA+piC, g2KbetaKgamma) * e(g1KbetaKgamma, piB) == e(piK, g2Kgamma)")
 		return false

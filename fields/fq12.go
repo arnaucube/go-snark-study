@@ -83,6 +83,7 @@ func (fq12 Fq12) Mul(a, b [2][3][2]*big.Int) [2][3][2]*big.Int {
 	}
 }
 
+// MulScalar is ...
 func (fq12 Fq12) MulScalar(base [2][3][2]*big.Int, e *big.Int) [2][3][2]*big.Int {
 	// for more possible implementations see g2.go file, at the function g2.MulScalar()
 
@@ -136,6 +137,7 @@ func (fq12 Fq12) Square(a [2][3][2]*big.Int) [2][3][2]*big.Int {
 	}
 }
 
+// Exp is ...
 func (fq12 Fq12) Exp(base [2][3][2]*big.Int, e *big.Int) [2][3][2]*big.Int {
 	// TODO fix bottleneck
 
@@ -154,12 +156,16 @@ func (fq12 Fq12) Exp(base [2][3][2]*big.Int, e *big.Int) [2][3][2]*big.Int {
 	// fmt.Println("time elapsed:", time.Since(before))
 	return res
 }
+
+// Affine is ...
 func (fq12 Fq12) Affine(a [2][3][2]*big.Int) [2][3][2]*big.Int {
 	return [2][3][2]*big.Int{
 		fq12.F.Affine(a[0]),
 		fq12.F.Affine(a[1]),
 	}
 }
+
+// Equal is ...
 func (fq12 Fq12) Equal(a, b [2][3][2]*big.Int) bool {
 	return fq12.F.Equal(a[0], b[0]) && fq12.F.Equal(a[1], b[1])
 }

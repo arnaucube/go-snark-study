@@ -185,6 +185,7 @@ func (bn128 Bn128) Pairing(p1 [3]*big.Int, p2 [3][2]*big.Int) [2][3][2]*big.Int 
 	return res
 }
 
+// AteG1Precomp is ...
 type AteG1Precomp struct {
 	Px *big.Int
 	Py *big.Int
@@ -199,11 +200,14 @@ func (bn128 Bn128) preComputeG1(p [3]*big.Int) AteG1Precomp {
 	return res
 }
 
+// EllCoeffs is ...
 type EllCoeffs struct {
 	Ell0  [2]*big.Int
 	EllVW [2]*big.Int
 	EllVV [2]*big.Int
 }
+
+// AteG2Precomp is ...
 type AteG2Precomp struct {
 	Qx     [2]*big.Int
 	Qy     [2]*big.Int
@@ -345,6 +349,7 @@ func (bn128 Bn128) g2MulByQ(p [3][2]*big.Int) [3][2]*big.Int {
 	}
 }
 
+// MillerLoop is ...
 func (bn128 Bn128) MillerLoop(pre1 AteG1Precomp, pre2 AteG2Precomp) [2][3][2]*big.Int {
 	// https://cryptojedi.org/papers/dclxvi-20100714.pdf
 	// https://eprint.iacr.org/2008/096.pdf

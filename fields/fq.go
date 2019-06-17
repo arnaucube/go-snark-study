@@ -58,6 +58,7 @@ func (fq Fq) Mul(a, b *big.Int) *big.Int {
 	return new(big.Int).Mod(m, fq.Q)
 }
 
+// MulScalar is ...
 func (fq Fq) MulScalar(base, e *big.Int) *big.Int {
 	return fq.Mul(base, e)
 }
@@ -113,6 +114,7 @@ func (fq Fq) Exp(base *big.Int, e *big.Int) *big.Int {
 	return res
 }
 
+// Rand is ...
 func (fq Fq) Rand() (*big.Int, error) {
 
 	// twoexp := new(big.Int).Exp(big.NewInt(2), big.NewInt(int64(maxbits)), nil)
@@ -131,14 +133,17 @@ func (fq Fq) Rand() (*big.Int, error) {
 	return rq, nil
 }
 
+// IsZero is ...
 func (fq Fq) IsZero(a *big.Int) bool {
 	return bytes.Equal(a.Bytes(), fq.Zero().Bytes())
 }
 
+// Copy is ...
 func (fq Fq) Copy(a *big.Int) *big.Int {
 	return new(big.Int).SetBytes(a.Bytes())
 }
 
+// Affine is ...
 func (fq Fq) Affine(a *big.Int) *big.Int {
 	nq := fq.Neg(fq.Q)
 
@@ -158,12 +163,14 @@ func (fq Fq) Affine(a *big.Int) *big.Int {
 	return aux
 }
 
+// Equal is ...
 func (fq Fq) Equal(a, b *big.Int) bool {
 	aAff := fq.Affine(a)
 	bAff := fq.Affine(b)
 	return bytes.Equal(aAff.Bytes(), bAff.Bytes())
 }
 
+// BigIsOdd is ...
 func BigIsOdd(n *big.Int) bool {
 	one := big.NewInt(int64(1))
 	and := new(big.Int).And(n, one)

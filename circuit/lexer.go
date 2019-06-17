@@ -1,4 +1,4 @@
-package circuitcompiler
+package circuit
 
 import (
 	"bufio"
@@ -6,9 +6,13 @@ import (
 	"io"
 )
 
+// OperatorSymbol is ...
 type OperatorSymbol int
+
+// Token is ...
 type Token int
 
+// Tokens
 const (
 	ILLEGAL Token = iota
 	WS

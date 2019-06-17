@@ -1,4 +1,4 @@
-package circuitcompiler
+package circuit
 
 import (
 	"errors"
@@ -143,11 +143,11 @@ func grabVar(signals []string, w []*big.Int, vStr string) *big.Int {
 	vBig := big.NewInt(int64(v))
 	if isVal {
 		return vBig
-	} else {
-		return w[indexInArray(signals, vStr)]
 	}
+	return w[indexInArray(signals, vStr)]
 }
 
+// Inputs is ...
 type Inputs struct {
 	Private []*big.Int
 	Public  []*big.Int

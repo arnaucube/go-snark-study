@@ -1,4 +1,4 @@
-package groth16
+package proof
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/arnaucube/go-snark/circuitcompiler"
+	"github.com/arnaucube/go-snark/circuit"
 	"github.com/arnaucube/go-snark/r1csqap"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +29,7 @@ func TestGroth16MinimalFlow(t *testing.T) {
 	fmt.Print("\ncode of the circuit:")
 
 	// parse the code
-	parser := circuitcompiler.NewParser(strings.NewReader(code))
+	parser := circuit.NewParser(strings.NewReader(code))
 	circuit, err := parser.Parse()
 	assert.Nil(t, err)
 
@@ -70,7 +70,8 @@ func TestGroth16MinimalFlow(t *testing.T) {
 	// ---
 	// calculate trusted setup
 	fmt.Println("groth")
-	setup, err := GenerateTrustedSetup(len(w), *circuit, alphas, betas, gammas)
+	setup := &Groth16Setup{}
+	err = setup.Init(len(w), *circuit, alphas, betas, gammas)
 	assert.Nil(t, err)
 	fmt.Println("\nt:", setup.Toxic.T)
 
@@ -85,7 +86,7 @@ func TestGroth16MinimalFlow(t *testing.T) {
 	// check length of polynomials H(x) and Z(x)
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 
-	proof, err := GenerateProofs(*circuit, setup, w, px)
+	proof, err := setup.Generate(*circuit, w, px)
 	assert.Nil(t, err)
 
 	// fmt.Println("\n proofs:")
@@ -97,11 +98,11 @@ func TestGroth16MinimalFlow(t *testing.T) {
 	b35Verif := big.NewInt(int64(35))
 	publicSignalsVerif := []*big.Int{b35Verif}
 	before := time.Now()
-	assert.True(t, VerifyProof(*circuit, setup, proof, publicSignalsVerif, true))
+	assert.True(t, setup.Verify(*circuit, proof, publicSignalsVerif, true))
 	fmt.Println("verify proof time elapsed:", time.Since(before))
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(34))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !VerifyProof(*circuit, setup, proof, wrongPublicSignalsVerif, false))
+	assert.True(t, !setup.Verify(*circuit, proof, wrongPublicSignalsVerif, false))
 }

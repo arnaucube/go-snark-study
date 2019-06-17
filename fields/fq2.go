@@ -75,6 +75,7 @@ func (fq2 Fq2) Mul(a, b [2]*big.Int) [2]*big.Int {
 	}
 }
 
+// MulScalar is ...
 func (fq2 Fq2) MulScalar(p [2]*big.Int, e *big.Int) [2]*big.Int {
 	// for more possible implementations see g2.go file, at the function g2.MulScalar()
 
@@ -132,20 +133,25 @@ func (fq2 Fq2) Square(a [2]*big.Int) [2]*big.Int {
 	}
 }
 
+// IsZero is ...
 func (fq2 Fq2) IsZero(a [2]*big.Int) bool {
 	return fq2.F.IsZero(a[0]) && fq2.F.IsZero(a[1])
 }
 
+// Affine is ...
 func (fq2 Fq2) Affine(a [2]*big.Int) [2]*big.Int {
 	return [2]*big.Int{
 		fq2.F.Affine(a[0]),
 		fq2.F.Affine(a[1]),
 	}
 }
+
+// Equal is ...
 func (fq2 Fq2) Equal(a, b [2]*big.Int) bool {
 	return fq2.F.Equal(a[0], b[0]) && fq2.F.Equal(a[1], b[1])
 }
 
+// Copy is ...
 func (fq2 Fq2) Copy(a [2]*big.Int) [2]*big.Int {
 	return [2]*big.Int{
 		fq2.F.Copy(a[0]),

@@ -29,6 +29,8 @@ func ArrayOfBigZeros(num int) []*big.Int {
 	}
 	return r
 }
+
+// BigArraysEqual is ...
 func BigArraysEqual(a, b []*big.Int) bool {
 	if len(a) != len(b) {
 		return false

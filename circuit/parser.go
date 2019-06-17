@@ -1,4 +1,4 @@
-package circuitcompiler
+package circuit
 
 import (
 	"bufio"
