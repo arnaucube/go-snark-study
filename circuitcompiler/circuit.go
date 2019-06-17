@@ -27,8 +27,8 @@ type gate struct {
 	right      *gate
 	funcInputs []*gate
 	value      *Constraint //is a pointer a good thing here??
-	leftIns    []factor    //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
-	rightIns   []factor
+	leftIns    factors     //leftIns and RightIns after addition gates have been reduced. only multiplication gates remain
+	rightIns   factors
 }
 
 func (g gate) String() string {

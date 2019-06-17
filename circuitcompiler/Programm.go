@@ -21,6 +21,12 @@ type R1CS struct {
 	B [][]*big.Int
 	C [][]*big.Int
 }
+
+type MultiplicationGateSignature struct {
+	identifier      string
+	commonExtracted [2]int //if the mgate had a extractable factor, it will be stored here
+}
+
 type Program struct {
 	functions             map[string]*Circuit
 	globalInputs          []string
@@ -34,12 +40,12 @@ type Program struct {
 	//this datastructure is nice but maybe ill replace it later with something less confusing
 	//it serves the elementary purpose of not computing a variable a second time.
 	//it boosts parse time
-	computedInContext map[string]map[string]string
+	computedInContext map[string]map[string]MultiplicationGateSignature
 
 	//to reduce the number of multiplication gates, we store each factor signature, and the variable name,
 	//so each time a variable is computed, that happens to have the very same factors, we reuse the former
 	//it boost setup and proof time
-	computedFactors map[string]string
+	computedFactors map[string]MultiplicationGateSignature
 }
 
 //returns the cardinality of all main inputs + 1 for the "one" signal
@@ -129,10 +135,10 @@ func (c *Circuit) buildTree(g *gate) {
 
 func (p *Program) ReduceCombinedTree() (orderedmGates []gate) {
 	orderedmGates = []gate{}
-	p.computedInContext = make(map[string]map[string]string)
-	p.computedFactors = make(map[string]string)
-	rootHash := []byte{}
-	p.computedInContext[string(rootHash)] = make(map[string]string)
+	p.computedInContext = make(map[string]map[string]MultiplicationGateSignature)
+	p.computedFactors = make(map[string]MultiplicationGateSignature)
+	rootHash := make([]byte, 10)
+	p.computedInContext[string(rootHash)] = make(map[string]MultiplicationGateSignature)
 	p.r1CSRecursiveBuild(p.getMainCircuit(), p.getMainCircuit().root, rootHash, &orderedmGates, false, false)
 	return orderedmGates
 }
@@ -140,7 +146,7 @@ func (p *Program) ReduceCombinedTree() (orderedmGates []gate) {
 //recursively walks through the parse tree to create a list of all
 //multiplication gates needed for the QAP construction
 //Takes into account, that multiplication with constants and addition (= substraction) can be reduced, and does so
-func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTraceBuildup []byte, orderedmGates *[]gate, negate bool, invert bool) (facs []factor, hashTraceResult []byte, variableEnd bool) {
+func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTraceBuildup []byte, orderedmGates *[]gate, negate bool, invert bool) (facs factors, hashTraceResult []byte, variableEnd bool) {
 
 	if node.OperationType() == CONST {
 		b1, v1 := isValue(node.value.Out)
@@ -152,7 +158,7 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 			mul = [2]int{1, v1}
 
 		}
-		return []factor{{typ: CONST, negate: negate, multiplicative: mul}}, make([]byte, 10), false
+		return factors{{typ: CONST, negate: negate, multiplicative: mul}}, hashTraceBuildup, false
 	}
 
 	if node.OperationType() == FUNC {
@@ -161,21 +167,19 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 		node = nextContext.root
 		hashTraceBuildup = hashTogether(hashTraceBuildup, []byte(currentCircuit.currentOutputName()))
 		if _, ex := p.computedInContext[string(hashTraceBuildup)]; !ex {
-			p.computedInContext[string(hashTraceBuildup)] = make(map[string]string)
+			p.computedInContext[string(hashTraceBuildup)] = make(map[string]MultiplicationGateSignature)
 		}
 
 	}
 
 	if node.OperationType() == IN {
-		fac := factor{typ: IN, name: node.value.Out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}
-		hashTraceBuildup = hashTogether(hashTraceBuildup, []byte(node.value.Out))
-		return []factor{fac}, hashTraceBuildup, true
+		fac := &factor{typ: IN, name: node.value.Out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}
+		return factors{fac}, hashTraceBuildup, true
 	}
 
 	if out, ex := p.computedInContext[string(hashTraceBuildup)][node.value.Out]; ex {
-		fac := factor{typ: IN, name: out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}
-		hashTraceBuildup = hashTogether(hashTraceBuildup, []byte(node.value.Out))
-		return []factor{fac}, hashTraceBuildup, true
+		fac := &factor{typ: IN, name: out.identifier, invert: invert, negate: negate, multiplicative: out.commonExtracted}
+		return factors{fac}, hashTraceBuildup, true
 	}
 
 	leftFactors, leftHash, variableEnd := p.r1CSRecursiveBuild(currentCircuit, node.left, hashTraceBuildup, orderedmGates, negate, invert)
@@ -185,19 +189,25 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 	if node.OperationType() == MULTIPLY {
 
 		if !(variableEnd && cons) && !node.value.invert && node != p.getMainCircuit().root {
-			//if !(variableEnd && cons) && !node.value.invert && node != p.getMainCircuit().root {
-			return mulFactors(leftFactors, rightFactors), append(leftHash, rightHash...), variableEnd || cons
+			return mulFactors(leftFactors, rightFactors), hashTraceBuildup, variableEnd || cons
+
 		}
-		sig := factorsSignature(leftFactors, rightFactors)
-		if out, ex := p.computedFactors[sig]; ex {
-			return []factor{{typ: IN, name: out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}, hashTraceBuildup, true
+		sig, newLef, newRigh := factorsSignature(leftFactors, rightFactors)
+		if out, ex := p.computedFactors[sig.identifier]; ex {
+			return factors{{typ: IN, name: out.identifier, invert: invert, negate: negate, multiplicative: sig.commonExtracted}}, hashTraceBuildup, true
 
 		}
 
 		rootGate := cloneGate(node)
+		//rootGate := node
 		rootGate.index = len(*orderedmGates)
-		rootGate.leftIns = leftFactors
-		rootGate.rightIns = rightFactors
+		if p.getMainCircuit().root == node {
+			newLef = mulFactors(newLef, factors{&factor{typ: CONST, multiplicative: sig.commonExtracted}})
+		}
+
+		rootGate.leftIns = newLef
+		rootGate.rightIns = newRigh
+
 		out := hashTogether(leftHash, rightHash)
 		rootGate.value.V1 = rootGate.value.V1 + string(leftHash[:10])
 		rootGate.value.V2 = rootGate.value.V2 + string(rightHash[:10])
@@ -208,183 +218,28 @@ func (p *Program) r1CSRecursiveBuild(currentCircuit *Circuit, node *gate, hashTr
 			rootGate.value.Out = rootGate.value.Out + string(out[:10])
 		}
 
-		p.computedInContext[string(hashTraceBuildup)][node.value.Out] = rootGate.value.Out
+		p.computedInContext[string(hashTraceBuildup)][node.value.Out] = MultiplicationGateSignature{identifier: rootGate.value.Out, commonExtracted: sig.commonExtracted}
 
-		p.computedFactors[sig] = rootGate.value.Out
+		p.computedFactors[sig.identifier] = MultiplicationGateSignature{identifier: rootGate.value.Out, commonExtracted: sig.commonExtracted}
 		*orderedmGates = append(*orderedmGates, *rootGate)
 
-		hashTraceBuildup = hashTogether(hashTraceBuildup, []byte(rootGate.value.Out))
-
-		return []factor{{typ: IN, name: rootGate.value.Out, invert: invert, negate: negate, multiplicative: [2]int{1, 1}}}, hashTraceBuildup, true
+		return factors{{typ: IN, name: rootGate.value.Out, invert: invert, negate: negate, multiplicative: sig.commonExtracted}}, hashTraceBuildup, true
 	}
 
 	switch node.OperationType() {
 	case PLUS:
-		return addFactors(leftFactors, rightFactors), hashTogether(leftHash, rightHash), variableEnd || cons
+		return addFactors(leftFactors, rightFactors), hashTraceBuildup, variableEnd || cons
 	default:
 		panic("unexpected gate")
 	}
 
 }
 
-type factor struct {
-	typ            Token
-	name           string
-	invert, negate bool
-	multiplicative [2]int
-}
-
-func (f factor) String() string {
-	if f.typ == CONST {
-		return fmt.Sprintf("(const fac: %v)", f.multiplicative)
-	}
-	str := f.name
-	if f.invert {
-		str += "^-1"
-	}
-	if f.negate {
-		str = "-" + str
-	}
-	return fmt.Sprintf("(\"%s\"  fac: %v)", str, f.multiplicative)
-}
-
-func mul2DVector(a, b [2]int) [2]int {
-	return [2]int{a[0] * b[0], a[1] * b[1]}
-}
-
-func factorsSignature(leftFactors, rightFactors []factor) string {
-	hasher.Reset()
-	//using a commutative operation here would be better. since a * b = b * a, but H(a,b) != H(b,a)
-	//could use  (g^a)^b == (g^b)^a where g is a generator of some prime field where the dicrete log is known to be hard
-	for _, facLeft := range leftFactors {
-		hasher.Write([]byte(facLeft.String()))
-	}
-	for _, Righ := range rightFactors {
-		hasher.Write([]byte(Righ.String()))
-	}
-	return string(hasher.Sum(nil))[:16]
-}
-
-//multiplies factor elements and returns the result
-//in case the factors do not hold any constants and all inputs are distinct, the output will be the concatenation of left+right
-func mulFactors(leftFactors, rightFactors []factor) (result []factor) {
-
-	for _, facLeft := range leftFactors {
-
-		for i, facRight := range rightFactors {
-			if facLeft.typ == CONST && facRight.typ == IN {
-				rightFactors[i] = factor{typ: IN, name: facRight.name, negate: Xor(facLeft.negate, facRight.negate), invert: facRight.invert, multiplicative: mul2DVector(facRight.multiplicative, facLeft.multiplicative)}
-				continue
-			}
-			if facRight.typ == CONST && facLeft.typ == IN {
-				rightFactors[i] = factor{typ: IN, name: facLeft.name, negate: Xor(facLeft.negate, facRight.negate), invert: facLeft.invert, multiplicative: mul2DVector(facRight.multiplicative, facLeft.multiplicative)}
-				continue
-			}
-
-			if facRight.typ&facLeft.typ == CONST {
-				rightFactors[i] = factor{typ: CONST, negate: Xor(facRight.negate, facLeft.negate), multiplicative: mul2DVector(facRight.multiplicative, facLeft.multiplicative)}
-				continue
-
-			}
-			//tricky part here
-			//this one should only be reached, after a true mgate had its left and right braches computed. here we
-			//a factor can appear at most in quadratic form. we reduce terms a*a^-1 here.
-			if facRight.typ&facLeft.typ == IN {
-				if facLeft.name == facRight.name {
-					if facRight.invert != facLeft.invert {
-						rightFactors[i] = factor{typ: CONST, negate: Xor(facRight.negate, facLeft.negate), multiplicative: mul2DVector(facRight.multiplicative, facLeft.multiplicative)}
-						continue
-					}
-				}
-
-				//rightFactors[i] = factor{typ: CONST, negate: Xor(facRight.negate, facLeft.negate), multiplicative: mul2DVector(facRight.multiplicative, facLeft.multiplicative)}
-				//continue
-
-			}
-			panic("unexpected. If this errror is thrown, its probably brcause a true multiplication gate has been skipped and treated as on with constant multiplication or addition ")
-
-		}
-
-	}
-
-	return rightFactors
-}
-
-//returns the absolute value of a signed int and a flag telling if the input was positive or not
-//this implementation is awesome and fast (see Henry S Warren, Hackers's Delight)
-func abs(n int) (val int, positive bool) {
-	y := n >> 63
-	return (n ^ y) - y, y == 0
-}
-
-//returns the reduced sum of two input factor arrays
-//if no reduction was done (worst case), it returns the concatenation of the input arrays
-func addFactors(leftFactors, rightFactors []factor) []factor {
-	var found bool
-	res := make([]factor, 0, len(leftFactors)+len(rightFactors))
-	for _, facLeft := range leftFactors {
-
-		found = false
-		for i, facRight := range rightFactors {
-
-			if facLeft.typ&facRight.typ == CONST {
-				var a0, b0 = facLeft.multiplicative[0], facRight.multiplicative[0]
-				if facLeft.negate {
-					a0 *= -1
-				}
-				if facRight.negate {
-					b0 *= -1
-				}
-				absValue, positive := abs(a0*facRight.multiplicative[1] + facLeft.multiplicative[1]*b0)
-
-				rightFactors[i] = factor{typ: CONST, negate: !positive, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}}
-
-				found = true
-				//res = append(res, factor{typ: CONST, negate: negate, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}})
-				break
-			}
-			if facLeft.typ&facRight.typ == IN && facLeft.invert == facRight.invert && facLeft.name == facRight.name {
-				var a0, b0 = facLeft.multiplicative[0], facRight.multiplicative[0]
-				if facLeft.negate {
-					a0 *= -1
-				}
-				if facRight.negate {
-					b0 *= -1
-				}
-				absValue, positive := abs(a0*facRight.multiplicative[1] + facLeft.multiplicative[1]*b0)
-
-				rightFactors[i] = factor{typ: IN, invert: facRight.invert, name: facRight.name, negate: !positive, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}}
-
-				found = true
-				//res = append(res, factor{typ: CONST, negate: negate, multiplicative: [2]int{absValue, facLeft.multiplicative[1] * facRight.multiplicative[1]}})
-				break
-			}
-		}
-		if !found {
-			res = append(res, facLeft)
-		}
-	}
-
-	for _, val := range rightFactors {
-		if val.multiplicative[0] != 0 {
-			res = append(res, val)
-		}
-	}
-
-	return res
-}
-
 //copies a gate neglecting its references to other gates
 func cloneGate(in *gate) (out *gate) {
 	constr := &Constraint{Inputs: in.value.Inputs, Out: in.value.Out, Op: in.value.Op, invert: in.value.invert, negate: in.value.negate, V2: in.value.V2, V1: in.value.V1}
-	nRightins := make([]factor, len(in.rightIns))
-	nLeftInst := make([]factor, len(in.leftIns))
-	for k, v := range in.rightIns {
-		nRightins[k] = v
-	}
-	for k, v := range in.leftIns {
-		nLeftInst[k] = v
-	}
+	nRightins := in.rightIns.clone()
+	nLeftInst := in.leftIns.clone()
 	return &gate{value: constr, leftIns: nLeftInst, rightIns: nRightins, index: in.index}
 }
 
@@ -499,7 +354,7 @@ func (p *Program) GenerateReducedR1CS(mGates []gate) (r1CS R1CS) {
 			bConstraint := r1csqap.ArrayOfBigZeros(size)
 			cConstraint := r1csqap.ArrayOfBigZeros(size)
 
-			insertValue := func(val factor, arr []*big.Int) {
+			insertValue := func(val *factor, arr []*big.Int) {
 				if val.typ != CONST {
 					if _, ex := indexMap[val.name]; !ex {
 						panic(fmt.Sprintf("%v index not found!!!", val.name))

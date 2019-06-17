@@ -114,9 +114,26 @@ var correctnesTest = []TraceCorrectnessTest{
 		out = g * i
 	`,
 	},
+	{
+		io: []InOut{{
+			inputs: []*big.Int{big.NewInt(int64(3)), big.NewInt(int64(5)), big.NewInt(int64(7)), big.NewInt(int64(11))},
+			result: big.NewInt(int64(264)),
+		}},
+		code: `
+	def main(a,b,c,d):
+		e = a * 3
+		f = b * 7
+		g = c * 11
+		h = d * 13
+		i = e + f
+		j = g + h
+		k = i + j
+		out = k * 1
+	`,
+	},
 }
 
-func TestNewProgramm(t *testing.T) {
+func TestCorrectness(t *testing.T) {
 
 	for _, test := range correctnesTest {
 		parser := NewParser(strings.NewReader(test.code))
@@ -156,6 +173,142 @@ func TestNewProgramm(t *testing.T) {
 			fmt.Println(w)
 			assert.Equal(t, io.result, w[program.GlobalInputCount()])
 		}
+
+	}
+
+}
+
+//test to check gate optimisation
+//mess around the code s.t. results is unchanged. number of gates should remain the same in any case
+func TestGateOptimisation(t *testing.T) {
+
+	io := InOut{
+		inputs: []*big.Int{big.NewInt(int64(365235)), big.NewInt(int64(11876525))},
+
+		result: bigNumberResult1,
+	}
+
+	equalCodes := []string{
+		`
+	def main( x  ,  z ) :
+		out = do(z) + add(x,x)
+
+	def do(x):
+		e = x * 5
+		b = e * 6
+		c = 7 * b
+		f = c * 1
+		d = f * c
+		out = d * mul(d,e)
+	
+	def add(x ,k):
+		z = k * x
+		out = do(x) + mul(x,z)
+	
+
+	def mul(a,b):
+		out = b * a
+	`, //switching order
+		`
+	def main( x  ,  z ) :
+		out = do(z) + add(x,x)
+
+	def do(x):
+		e = x * 5
+		b = e * 6
+		c = b * 7
+		f = c * 1
+		d = c * f
+		out = d * mul(d,e)
+	
+	def add(x ,k):
+		z = k * x
+		out = do(x) + mul(x,z)
+	
+
+	def mul(a,b):
+		out = a * b
+	`, //switching order
+		`
+	def main( x  ,  z ) :
+		out = do(z) + add(x,x)
+
+	def do(x):
+		e = x * 5
+		j = e * 3
+		k = e * 3
+		b = j+k
+		c = b * 7
+		f = c * 1
+		d = c * f
+		g = d * 1
+		out = g * mul(d,e)
+	
+	def add(k ,x):
+		z = k * x
+		out = do(x) + mul(x,z)
+	
+
+	def mul(b,a):
+		out = a * b
+	`, `
+	def main( x  ,  z ) :
+		out =  add(x,x)+do(z)
+
+	def do(x):
+		e = x * 5
+		j = 3 * e
+		k = e * 3
+		b = j+k
+		c = b * 7
+		f = c * 1
+		d = c * f
+		g = d * 1
+		out = mul(d,e) * g
+	
+	def add(k ,x):
+		z = k * x
+		out =  mul(x,z) + do(x)
+	
+
+	def mul(b,a):
+		out = a * b
+	`,
+	}
+
+	var r1css = make([]R1CS, len(equalCodes))
+
+	for i, c := range equalCodes {
+		parser := NewParser(strings.NewReader(c))
+		program, err := parser.Parse()
+
+		if err != nil {
+			panic(err)
+		}
+		program.BuildConstraintTrees()
+
+		gates := program.ReduceCombinedTree()
+		for _, g := range gates {
+			fmt.Printf("\n %v", g)
+		}
+		fmt.Println("\n generating R1CS")
+		r1cs := program.GenerateReducedR1CS(gates)
+		r1css[i] = r1cs
+		fmt.Println(r1cs.A)
+		fmt.Println(r1cs.B)
+		fmt.Println(r1cs.C)
+	}
+
+	for i := 0; i < len(equalCodes)-1; i++ {
+		assert.Equal(t, len(r1css[i].A), len(r1css[i+1].A))
+	}
+
+	for i := 0; i < len(equalCodes); i++ {
+		//assert.Equal(t, len(r1css[i].A), len(r1css[i+1].A))
+		w := CalculateWitness(io.inputs, r1css[i])
+		fmt.Println("witness")
+		fmt.Println(w)
+		assert.Equal(t, io.result, w[3])
 
 	}
 
