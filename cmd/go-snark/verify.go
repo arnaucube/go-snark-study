@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/arnaucube/go-snark/circuit"
 	"github.com/urfave/cli"
@@ -10,11 +9,10 @@ import (
 
 func verify(context *cli.Context) error {
 	// load circuit
-	var cir circuit.Circuit
-	if err := loadFromFile(compiledFileName, &cir); err != nil {
+	cir := &circuit.Circuit{}
+	if err := loadFromFile(compiledFileName, cir); err != nil {
 		return err
 	}
-	log.Printf("circuit: %v\n", cir)
 
 	// load inputs
 	var inputs circuit.Inputs
@@ -30,7 +28,6 @@ func verify(context *cli.Context) error {
 	if err := loadFromFile(setupFileName, setup); err != nil {
 		return err
 	}
-	log.Printf("setup: %v\n", setup)
 
 	// load proof
 	proof, err := newProof()
@@ -42,9 +39,14 @@ func verify(context *cli.Context) error {
 	}
 
 	// verify proof
-	if ok := setup.Verify(cir, proof, inputs.Public, true); !ok {
-		return fmt.Errorf("verif KO")
+	ok, err := setup.Verify(proof, inputs.Public)
+	if err != nil {
+		return err
 	}
-	log.Printf("verif OK\n")
+	if ok {
+		fmt.Println("OK")
+	} else {
+		fmt.Println("KO")
+	}
 	return nil
 }

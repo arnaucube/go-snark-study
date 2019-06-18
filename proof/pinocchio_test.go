@@ -2,23 +2,17 @@ package proof
 
 import (
 	"bytes"
-	"fmt"
 	"math/big"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/arnaucube/go-snark/circuit"
-	"github.com/arnaucube/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark/fields"
 )
 
 func TestZkFromFlatCircuitCode(t *testing.T) {
-	// compile circuit and get the R1CS
-
-	// circuit function
-	// y = x^3 + x + 5
 	code := `
 		func exp3(private a):
 			b = a * a
@@ -35,48 +29,26 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 			equals(s1, s5)
 			out = 1 * 1
 	`
-	// the same code without the functions calling, all in one func
-	// code := `
-	// func test(private s0, public s1):
-	//         s2 = s0 * s0
-	//         s3 = s2 * s0
-	//         s4 = s3 + s0
-	//         s5 = s4 + 5
-	//         equals(s1, s5)
-	//         out = 1 * 1
-	// `
-	fmt.Print("\ncode of the circuit:")
-	fmt.Println(code)
 
-	// parse the code
 	parser := circuit.NewParser(strings.NewReader(code))
-	circuit, err := parser.Parse()
+	cir, err := parser.Parse()
 	assert.Nil(t, err)
-	// fmt.Println("\ncircuit data:", circuit)
-	// circuitJson, _ := json.Marshal(circuit)
-	// fmt.Println("circuit:", string(circuitJson))
 
 	b3 := big.NewInt(int64(3))
 	privateInputs := []*big.Int{b3}
 	b35 := big.NewInt(int64(35))
 	publicSignals := []*big.Int{b35}
 
-	// wittness
-	w, err := circuit.CalculateWitness(privateInputs, publicSignals)
+	w, err := cir.CalculateWitness(privateInputs, publicSignals)
 	assert.Nil(t, err)
 
-	// code to R1CS
-	fmt.Println("\ngenerating R1CS from code")
-	a, b, c := circuit.GenerateR1CS()
-	fmt.Println("\nR1CS:")
-	fmt.Println("a:", a)
-	fmt.Println("b:", b)
-	fmt.Println("c:", c)
+	cir.GenerateR1CS()
 
-	// R1CS to QAP
-	// TODO zxQAP is not used and is an old impl, TODO remove
-	alphas, betas, gammas, zxQAP := Utils.PF.R1CSToQAP(a, b, c)
-	fmt.Println("qap")
+	alphas, betas, gammas, zxQAP := R1CSToQAP(
+		cir.R1CS.A,
+		cir.R1CS.B,
+		cir.R1CS.C,
+	)
 	assert.Equal(t, 8, len(alphas))
 	assert.Equal(t, 8, len(alphas))
 	assert.Equal(t, 8, len(alphas))
@@ -103,23 +75,23 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 
 	div, rem := Utils.PF.Div(px, zxQAP)
 	assert.Equal(t, hxQAP, div)
-	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(6))
+	assert.Equal(t, rem, fields.ArrayOfBigZeros(6))
 
 	// calculate trusted setup
 	setup := &PinocchioSetup{}
-	err = setup.Init(len(w), *circuit, alphas, betas, gammas)
+	err = setup.Init(cir, alphas, betas, gammas)
 	assert.Nil(t, err)
-	fmt.Println("\nt:", setup.Toxic.T)
 
-	// zx and setup.Pk.Z should be the same (currently not, the correct one is the calculation used inside GenerateTrustedSetup function), the calculation is repeated. TODO avoid repeating calculation
+	// zx and setup.Pk.Z should be the same
+	// currently not, the correct one is the calculation used inside GenerateTrustedSetup function
+	// the calculation is repeated. TODO avoid repeating calculation
 	assert.Equal(t, zxQAP, setup.Pk.Z)
 
 	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z)
 	assert.Equal(t, hx, hxQAP)
-	// assert.Equal(t, hxQAP, hx)
 	div, rem = Utils.PF.Div(px, setup.Pk.Z)
 	assert.Equal(t, hx, div)
-	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(6))
+	assert.Equal(t, rem, fields.ArrayOfBigZeros(6))
 
 	assert.Equal(t, px, Utils.PF.Mul(hxQAP, zxQAP))
 	// hx==px/zx so px==hx*zx
@@ -129,25 +101,25 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 	assert.Equal(t, len(hxQAP), len(px)-len(zxQAP)+1)
 
-	proof, err := setup.Generate(*circuit, w, px)
+	proof, err := setup.Generate(cir, w, px)
 	assert.Nil(t, err)
 
-	// fmt.Println("\n proofs:")
-	// fmt.Println(proof)
-
-	// fmt.Println("public signals:", proof.PublicSignals)
-	fmt.Println("\nsignals:", circuit.Signals)
-	fmt.Println("witness:", w)
 	b35Verif := big.NewInt(int64(35))
 	publicSignalsVerif := []*big.Int{b35Verif}
-	before := time.Now()
-	assert.True(t, setup.Verify(*circuit, proof, publicSignalsVerif, true))
-	fmt.Println("verify proof time elapsed:", time.Since(before))
+	{
+		r, err := setup.Verify(proof, publicSignalsVerif)
+		assert.Nil(t, err)
+		assert.True(t, r)
+	}
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(34))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !setup.Verify(*circuit, proof, wrongPublicSignalsVerif, false))
+	{
+		r, err := setup.Verify(proof, wrongPublicSignalsVerif)
+		assert.Nil(t, err)
+		assert.False(t, r)
+	}
 }
 
 func TestZkMultiplication(t *testing.T) {
@@ -157,11 +129,9 @@ func TestZkMultiplication(t *testing.T) {
 		equals(c, d)
 		out = 1 * 1
 	`
-	fmt.Println("code", code)
 
-	// parse the code
 	parser := circuit.NewParser(strings.NewReader(code))
-	circuit, err := parser.Parse()
+	cir, err := parser.Parse()
 	assert.Nil(t, err)
 
 	b3 := big.NewInt(int64(3))
@@ -170,21 +140,19 @@ func TestZkMultiplication(t *testing.T) {
 	b12 := big.NewInt(int64(12))
 	publicSignals := []*big.Int{b12}
 
-	// wittness
-	w, err := circuit.CalculateWitness(privateInputs, publicSignals)
+	w, err := cir.CalculateWitness(privateInputs, publicSignals)
 	assert.Nil(t, err)
 
-	// code to R1CS
-	fmt.Println("\ngenerating R1CS from code")
-	a, b, c := circuit.GenerateR1CS()
-	fmt.Println("\nR1CS:")
-	fmt.Println("a:", a)
-	fmt.Println("b:", b)
-	fmt.Println("c:", c)
+	cir.GenerateR1CS()
 
 	// R1CS to QAP
-	// TODO zxQAP is not used and is an old impl. TODO remove
-	alphas, betas, gammas, zxQAP := Utils.PF.R1CSToQAP(a, b, c)
+	// TODO zxQAP is not used and is an old impl.
+	// TODO remove
+	alphas, betas, gammas, zxQAP := R1CSToQAP(
+		cir.R1CS.A,
+		cir.R1CS.B,
+		cir.R1CS.C,
+	)
 	assert.Equal(t, 6, len(alphas))
 	assert.Equal(t, 6, len(betas))
 	assert.Equal(t, 6, len(betas))
@@ -211,15 +179,15 @@ func TestZkMultiplication(t *testing.T) {
 
 	div, rem := Utils.PF.Div(px, zxQAP)
 	assert.Equal(t, hxQAP, div)
-	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
+	assert.Equal(t, rem, fields.ArrayOfBigZeros(4))
 
-	// calculate trusted setup
 	setup := &PinocchioSetup{}
-	err = setup.Init(len(w), *circuit, alphas, betas, gammas)
+	err = setup.Init(cir, alphas, betas, gammas)
 	assert.Nil(t, err)
-	// fmt.Println("\nt:", setup.Toxic.T)
 
-	// zx and setup.Pk.Z should be the same (currently not, the correct one is the calculation used inside GenerateTrustedSetup function), the calculation is repeated. TODO avoid repeating calculation
+	// zx and setup.Pk.Z should be the same
+	// currently not, the correct one is the calculation used inside GenerateTrustedSetup function
+	// the calculation is repeated. TODO avoid repeating calculation
 	assert.Equal(t, zxQAP, setup.Pk.Z)
 
 	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z)
@@ -228,7 +196,7 @@ func TestZkMultiplication(t *testing.T) {
 
 	div, rem = Utils.PF.Div(px, setup.Pk.Z)
 	assert.Equal(t, hx, div)
-	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(4))
+	assert.Equal(t, rem, fields.ArrayOfBigZeros(4))
 
 	assert.Equal(t, px, Utils.PF.Mul(hxQAP, zxQAP))
 	// hx==px/zx so px==hx*zx
@@ -238,30 +206,28 @@ func TestZkMultiplication(t *testing.T) {
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 	assert.Equal(t, len(hxQAP), len(px)-len(zxQAP)+1)
 
-	proof, err := setup.Generate(*circuit, w, px)
+	proof, err := setup.Generate(cir, w, px)
 	assert.Nil(t, err)
 
-	// fmt.Println("\n proofs:")
-	// fmt.Println(proof)
-
-	// fmt.Println("public signals:", proof.PublicSignals)
-	fmt.Println("\n", circuit.Signals)
-	fmt.Println("witness", w)
 	b12Verif := big.NewInt(int64(12))
 	publicSignalsVerif := []*big.Int{b12Verif}
-	before := time.Now()
-	assert.True(t, setup.Verify(*circuit, proof, publicSignalsVerif, true))
-	fmt.Println("verify proof time elapsed:", time.Since(before))
+	{
+		r, err := setup.Verify(proof, publicSignalsVerif)
+		assert.Nil(t, err)
+		assert.True(t, r)
+	}
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(11))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !setup.Verify(*circuit, proof, wrongPublicSignalsVerif, false))
+	{
+		r, err := setup.Verify(proof, wrongPublicSignalsVerif)
+		assert.Nil(t, err)
+		assert.False(t, r)
+	}
 }
 
 func TestMinimalFlow(t *testing.T) {
-	// circuit function
-	// y = x^3 + x + 5
 	code := `
 	func main(private s0, public s1):
 		s2 = s0 * s0
@@ -271,12 +237,9 @@ func TestMinimalFlow(t *testing.T) {
 		equals(s1, s5)
 		out = 1 * 1
 	`
-	fmt.Print("\ncode of the circuit:")
-	fmt.Println(code)
 
-	// parse the code
 	parser := circuit.NewParser(strings.NewReader(code))
-	circuit, err := parser.Parse()
+	cir, err := parser.Parse()
 	assert.Nil(t, err)
 
 	b3 := big.NewInt(int64(3))
@@ -284,22 +247,18 @@ func TestMinimalFlow(t *testing.T) {
 	b35 := big.NewInt(int64(35))
 	publicSignals := []*big.Int{b35}
 
-	// wittness
-	w, err := circuit.CalculateWitness(privateInputs, publicSignals)
+	w, err := cir.CalculateWitness(privateInputs, publicSignals)
 	assert.Nil(t, err)
 
-	// code to R1CS
-	fmt.Println("\ngenerating R1CS from code")
-	a, b, c := circuit.GenerateR1CS()
-	fmt.Println("\nR1CS:")
-	fmt.Println("a:", a)
-	fmt.Println("b:", b)
-	fmt.Println("c:", c)
+	cir.GenerateR1CS()
 
 	// R1CS to QAP
 	// TODO zxQAP is not used and is an old impl, TODO remove
-	alphas, betas, gammas, _ := Utils.PF.R1CSToQAP(a, b, c)
-	fmt.Println("qap")
+	alphas, betas, gammas, _ := R1CSToQAP(
+		cir.R1CS.A,
+		cir.R1CS.B,
+		cir.R1CS.C,
+	)
 	assert.Equal(t, 8, len(alphas))
 	assert.Equal(t, 8, len(alphas))
 	assert.Equal(t, 8, len(alphas))
@@ -313,14 +272,13 @@ func TestMinimalFlow(t *testing.T) {
 
 	// calculate trusted setup
 	setup := &PinocchioSetup{}
-	err = setup.Init(len(w), *circuit, alphas, betas, gammas)
+	err = setup.Init(cir, alphas, betas, gammas)
 	assert.Nil(t, err)
-	fmt.Println("\nt:", setup.Toxic.T)
 
 	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z)
 	div, rem := Utils.PF.Div(px, setup.Pk.Z)
 	assert.Equal(t, hx, div)
-	assert.Equal(t, rem, r1csqap.ArrayOfBigZeros(6))
+	assert.Equal(t, rem, fields.ArrayOfBigZeros(6))
 
 	// hx==px/zx so px==hx*zx
 	assert.Equal(t, px, Utils.PF.Mul(hx, setup.Pk.Z))
@@ -328,23 +286,23 @@ func TestMinimalFlow(t *testing.T) {
 	// check length of polynomials H(x) and Z(x)
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 
-	proof, err := setup.Generate(*circuit, w, px)
+	proof, err := setup.Generate(cir, w, px)
 	assert.Nil(t, err)
 
-	// fmt.Println("\n proofs:")
-	// fmt.Println(proof)
-
-	// fmt.Println("public signals:", proof.PublicSignals)
-	fmt.Println("\nsignals:", circuit.Signals)
-	fmt.Println("witness:", w)
 	b35Verif := big.NewInt(int64(35))
 	publicSignalsVerif := []*big.Int{b35Verif}
-	before := time.Now()
-	assert.True(t, setup.Verify(*circuit, proof, publicSignalsVerif, true))
-	fmt.Println("verify proof time elapsed:", time.Since(before))
+	{
+		r, err := setup.Verify(proof, publicSignalsVerif)
+		assert.Nil(t, err)
+		assert.True(t, r)
+	}
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(34))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !setup.Verify(*circuit, proof, wrongPublicSignalsVerif, false))
+	{
+		r, err := setup.Verify(proof, wrongPublicSignalsVerif)
+		assert.Nil(t, err)
+		assert.False(t, r)
+	}
 }

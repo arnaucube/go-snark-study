@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+go fmt ./... \
+    && golint ./... \
+    && go test ./... \
+    && go install ./cmd/go-snark

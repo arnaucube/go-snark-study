@@ -32,6 +32,12 @@ var commands = []cli.Command{
 		Action:  compile,
 	},
 	{
+		Name:    "test",
+		Aliases: []string{},
+		Usage:   "test a circuit",
+		Action:  test,
+	},
+	{
 		Name:    "setup",
 		Aliases: []string{},
 		Usage:   "generate trusted setup for a circuit",

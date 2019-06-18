@@ -22,15 +22,15 @@ func TestCircuitParser(t *testing.T) {
 		out = 1 * 1
 	`
 	parser := NewParser(strings.NewReader(flat))
-	circuit, err := parser.Parse()
+	cir, err := parser.Parse()
 	assert.Nil(t, err)
 
 	// flat code to R1CS
-	a, b, c := circuit.GenerateR1CS()
-	assert.Equal(t, "s0", circuit.PrivateInputs[0])
-	assert.Equal(t, "s1", circuit.PublicInputs[0])
+	cir.GenerateR1CS()
+	assert.Equal(t, "s0", cir.PrivateInputs[0])
+	assert.Equal(t, "s1", cir.PublicInputs[0])
 
-	assert.Equal(t, []string{"one", "s1", "s0", "s2", "s3", "s4", "s5", "out"}, circuit.Signals)
+	assert.Equal(t, []string{"one", "s1", "s0", "s2", "s3", "s4", "s5", "out"}, cir.Signals)
 
 	// expected result
 	b0 := big.NewInt(int64(0))
@@ -64,16 +64,16 @@ func TestCircuitParser(t *testing.T) {
 		[]*big.Int{b0, b0, b0, b0, b0, b0, b0, b1},
 	}
 
-	assert.Equal(t, aExpected, a)
-	assert.Equal(t, bExpected, b)
-	assert.Equal(t, cExpected, c)
+	assert.Equal(t, aExpected, cir.R1CS.A)
+	assert.Equal(t, bExpected, cir.R1CS.B)
+	assert.Equal(t, cExpected, cir.R1CS.C)
 
 	b3 := big.NewInt(int64(3))
 	privateInputs := []*big.Int{b3}
 	b35 := big.NewInt(int64(35))
 	publicInputs := []*big.Int{b35}
 	// Calculate Witness
-	w, err := circuit.CalculateWitness(privateInputs, publicInputs)
+	w, err := cir.CalculateWitness(privateInputs, publicInputs)
 	assert.Nil(t, err)
 	b9 := big.NewInt(int64(9))
 	b27 := big.NewInt(int64(27))
@@ -81,12 +81,9 @@ func TestCircuitParser(t *testing.T) {
 	wExpected := []*big.Int{b1, b35, b3, b9, b27, b30, b35, b1}
 	assert.Equal(t, wExpected, w)
 
-	// circuitJson, _ := json.Marshal(circuit)
-	// fmt.Println("circuit:", string(circuitJson))
-
-	assert.Equal(t, circuit.NPublic, 1)
-	assert.Equal(t, len(circuit.PublicInputs), 1)
-	assert.Equal(t, len(circuit.PrivateInputs), 1)
+	assert.Equal(t, cir.NPublic, 1)
+	assert.Equal(t, len(cir.PublicInputs), 1)
+	assert.Equal(t, len(cir.PrivateInputs), 1)
 }
 
 func TestCircuitWithFuncCallsParser(t *testing.T) {
@@ -108,15 +105,15 @@ func TestCircuitWithFuncCallsParser(t *testing.T) {
 			out = 1 * 1
 	`
 	parser := NewParser(strings.NewReader(code))
-	circuit, err := parser.Parse()
+	cir, err := parser.Parse()
 	assert.Nil(t, err)
 
 	// flat code to R1CS
-	a, b, c := circuit.GenerateR1CS()
-	assert.Equal(t, "s0", circuit.PrivateInputs[0])
-	assert.Equal(t, "s1", circuit.PublicInputs[0])
+	cir.GenerateR1CS()
+	assert.Equal(t, "s0", cir.PrivateInputs[0])
+	assert.Equal(t, "s1", cir.PublicInputs[0])
 
-	assert.Equal(t, []string{"one", "s1", "s0", "b0", "s3", "s4", "s5", "out"}, circuit.Signals)
+	assert.Equal(t, []string{"one", "s1", "s0", "b0", "s3", "s4", "s5", "out"}, cir.Signals)
 
 	// expected result
 	b0 := big.NewInt(int64(0))
@@ -150,16 +147,16 @@ func TestCircuitWithFuncCallsParser(t *testing.T) {
 		[]*big.Int{b0, b0, b0, b0, b0, b0, b0, b1},
 	}
 
-	assert.Equal(t, aExpected, a)
-	assert.Equal(t, bExpected, b)
-	assert.Equal(t, cExpected, c)
+	assert.Equal(t, aExpected, cir.R1CS.A)
+	assert.Equal(t, bExpected, cir.R1CS.B)
+	assert.Equal(t, cExpected, cir.R1CS.C)
 
 	b3 := big.NewInt(int64(3))
 	privateInputs := []*big.Int{b3}
 	b35 := big.NewInt(int64(35))
 	publicInputs := []*big.Int{b35}
-	// Calculate Witness
-	w, err := circuit.CalculateWitness(privateInputs, publicInputs)
+
+	w, err := cir.CalculateWitness(privateInputs, publicInputs)
 	assert.Nil(t, err)
 	b9 := big.NewInt(int64(9))
 	b27 := big.NewInt(int64(27))
@@ -167,12 +164,9 @@ func TestCircuitWithFuncCallsParser(t *testing.T) {
 	wExpected := []*big.Int{b1, b35, b3, b9, b27, b30, b35, b1}
 	assert.Equal(t, wExpected, w)
 
-	// circuitJson, _ := json.Marshal(circuit)
-	// fmt.Println("circuit:", string(circuitJson))
-
-	assert.Equal(t, circuit.NPublic, 1)
-	assert.Equal(t, len(circuit.PublicInputs), 1)
-	assert.Equal(t, len(circuit.PrivateInputs), 1)
+	assert.Equal(t, cir.NPublic, 1)
+	assert.Equal(t, len(cir.PublicInputs), 1)
+	assert.Equal(t, len(cir.PrivateInputs), 1)
 }
 
 func TestCircuitFromFileWithImports(t *testing.T) {
@@ -180,15 +174,15 @@ func TestCircuitFromFileWithImports(t *testing.T) {
 	assert.Nil(t, err)
 
 	parser := NewParser(bufio.NewReader(circuitFile))
-	circuit, err := parser.Parse()
+	cir, err := parser.Parse()
 	assert.Nil(t, err)
 
 	// flat code to R1CS
-	a, b, c := circuit.GenerateR1CS()
-	assert.Equal(t, "s0", circuit.PrivateInputs[0])
-	assert.Equal(t, "s1", circuit.PublicInputs[0])
+	cir.GenerateR1CS()
+	assert.Equal(t, "s0", cir.PrivateInputs[0])
+	assert.Equal(t, "s1", cir.PublicInputs[0])
 
-	assert.Equal(t, []string{"one", "s1", "s0", "b0", "s3", "s4", "s5", "out"}, circuit.Signals)
+	assert.Equal(t, []string{"one", "s1", "s0", "b0", "s3", "s4", "s5", "out"}, cir.Signals)
 
 	// expected result
 	b0 := big.NewInt(int64(0))
@@ -222,16 +216,16 @@ func TestCircuitFromFileWithImports(t *testing.T) {
 		[]*big.Int{b0, b0, b0, b0, b0, b0, b0, b1},
 	}
 
-	assert.Equal(t, aExpected, a)
-	assert.Equal(t, bExpected, b)
-	assert.Equal(t, cExpected, c)
+	assert.Equal(t, aExpected, cir.R1CS.A)
+	assert.Equal(t, bExpected, cir.R1CS.B)
+	assert.Equal(t, cExpected, cir.R1CS.C)
 
 	b3 := big.NewInt(int64(3))
 	privateInputs := []*big.Int{b3}
 	b35 := big.NewInt(int64(35))
 	publicInputs := []*big.Int{b35}
 	// Calculate Witness
-	w, err := circuit.CalculateWitness(privateInputs, publicInputs)
+	w, err := cir.CalculateWitness(privateInputs, publicInputs)
 	assert.Nil(t, err)
 	b9 := big.NewInt(int64(9))
 	b27 := big.NewInt(int64(27))
@@ -239,10 +233,7 @@ func TestCircuitFromFileWithImports(t *testing.T) {
 	wExpected := []*big.Int{b1, b35, b3, b9, b27, b30, b35, b1}
 	assert.Equal(t, wExpected, w)
 
-	// circuitJson, _ := json.Marshal(circuit)
-	// fmt.Println("circuit:", string(circuitJson))
-
-	assert.Equal(t, circuit.NPublic, 1)
-	assert.Equal(t, len(circuit.PublicInputs), 1)
-	assert.Equal(t, len(circuit.PrivateInputs), 1)
+	assert.Equal(t, cir.NPublic, 1)
+	assert.Equal(t, len(cir.PublicInputs), 1)
+	assert.Equal(t, len(cir.PrivateInputs), 1)
 }

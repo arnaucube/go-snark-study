@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/arnaucube/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark/fields"
 )
 
 // Circuit is the data structure of the compiled circuit
@@ -90,9 +90,9 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 
 	used := make(map[string]bool)
 	for _, constraint := range circ.Constraints {
-		aConstraint := r1csqap.ArrayOfBigZeros(len(circ.Signals))
-		bConstraint := r1csqap.ArrayOfBigZeros(len(circ.Signals))
-		cConstraint := r1csqap.ArrayOfBigZeros(len(circ.Signals))
+		aConstraint := fields.ArrayOfBigZeros(len(circ.Signals))
+		bConstraint := fields.ArrayOfBigZeros(len(circ.Signals))
+		cConstraint := fields.ArrayOfBigZeros(len(circ.Signals))
 
 		// if existInArray(constraint.Out) {
 		// if used[constraint.Out] {
@@ -162,7 +162,7 @@ func (circ *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*
 	if len(publicInputs) != len(circ.PublicInputs) {
 		return []*big.Int{}, errors.New("given publicInputs != circuit.PublicInputs")
 	}
-	w := r1csqap.ArrayOfBigZeros(len(circ.Signals))
+	w := fields.ArrayOfBigZeros(len(circ.Signals))
 	w[0] = big.NewInt(int64(1))
 	for i, input := range publicInputs {
 		w[i+1] = input

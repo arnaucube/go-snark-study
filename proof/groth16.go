@@ -9,7 +9,7 @@ import (
 	"github.com/arnaucube/go-snark/circuit"
 )
 
-// Groth16Setup is the data structure holding the Trusted Groth16Setup data.
+// Groth16Setup is Groth16 system setup structure
 type Groth16Setup struct {
 	Toxic struct {
 		T      *big.Int // trusted setup secret
@@ -17,7 +17,7 @@ type Groth16Setup struct {
 		Kbeta  *big.Int
 		Kgamma *big.Int
 		Kdelta *big.Int
-	}
+	} `json:"-"`
 
 	// public
 	Pk struct { // Proving Key
@@ -51,7 +51,7 @@ type Groth16Setup struct {
 	}
 }
 
-// Groth16Proof contains the parameters to proof the zkSNARK
+// Groth16Proof is Groth16 proof structure
 type Groth16Proof struct {
 	PiA [3]*big.Int
 	PiB [3][2]*big.Int
@@ -63,11 +63,10 @@ func (setup *Groth16Setup) Z() []*big.Int {
 	return setup.Pk.Z
 }
 
-// Init generates the Trusted Setup from a compiled Circuit. The Setup.Toxic sub data structure must be destroyed
-func (setup *Groth16Setup) Init(witnessLength int, circuit circuit.Circuit, alphas, betas, gammas [][]*big.Int) error {
+// Init setups the trusted setup from a compiled circuit
+func (setup *Groth16Setup) Init(cir *circuit.Circuit, alphas, betas, gammas [][]*big.Int) error {
 	var err error
 
-	// generate random t value
 	setup.Toxic.T, err = Utils.FqR.Rand()
 	if err != nil {
 		return err
@@ -90,7 +89,6 @@ func (setup *Groth16Setup) Init(witnessLength int, circuit circuit.Circuit, alph
 		return err
 	}
 
-	// z pol
 	zpol := []*big.Int{big.NewInt(int64(1))}
 	for i := 1; i < len(alphas)-1; i++ {
 		zpol = Utils.PF.Mul(
@@ -131,7 +129,7 @@ func (setup *Groth16Setup) Init(witnessLength int, circuit circuit.Circuit, alph
 	setup.Vk.G2.Gamma = Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, setup.Toxic.Kgamma)
 	setup.Vk.G2.Delta = Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, setup.Toxic.Kdelta)
 
-	for i := 0; i < len(circuit.Signals); i++ {
+	for i := 0; i < len(cir.Signals); i++ {
 		// Pk.G1.At: {a(τ)} from 0 to m
 		at := Utils.PF.Eval(alphas[i], setup.Toxic.T)
 		a := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, at)
@@ -147,10 +145,10 @@ func (setup *Groth16Setup) Init(witnessLength int, circuit circuit.Circuit, alph
 	}
 
 	zero3 := [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
-	for i := 0; i < circuit.NPublic+1; i++ {
+	for i := 0; i < cir.NPublic+1; i++ {
 		setup.Pk.BACDelta = append(setup.Pk.BACDelta, zero3)
 	}
-	for i := circuit.NPublic + 1; i < circuit.NVars; i++ {
+	for i := cir.NPublic + 1; i < cir.NVars; i++ {
 		// TODO calculate all at, bt, ct outside, to avoid repeating calculations
 		at := Utils.PF.Eval(alphas[i], setup.Toxic.T)
 		bt := Utils.PF.Eval(betas[i], setup.Toxic.T)
@@ -171,7 +169,7 @@ func (setup *Groth16Setup) Init(witnessLength int, circuit circuit.Circuit, alph
 		setup.Pk.BACDelta = append(setup.Pk.BACDelta, g1c)
 	}
 
-	for i := 0; i <= circuit.NPublic; i++ {
+	for i := 0; i <= cir.NPublic; i++ {
 		at := Utils.PF.Eval(alphas[i], setup.Toxic.T)
 		bt := Utils.PF.Eval(betas[i], setup.Toxic.T)
 		ct := Utils.PF.Eval(gammas[i], setup.Toxic.T)
@@ -193,8 +191,8 @@ func (setup *Groth16Setup) Init(witnessLength int, circuit circuit.Circuit, alph
 	return nil
 }
 
-// Generate generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
-func (setup Groth16Setup) Generate(circuit circuit.Circuit, w []*big.Int, px []*big.Int) (Proof, error) {
+// Generate generates Pinocchio proof
+func (setup Groth16Setup) Generate(cir *circuit.Circuit, w []*big.Int, px []*big.Int) (Proof, error) {
 	proof := &Groth16Proof{}
 	proof.PiA = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 	proof.PiB = Utils.Bn.Fq6.Zero()
@@ -212,12 +210,12 @@ func (setup Groth16Setup) Generate(circuit circuit.Circuit, w []*big.Int, px []*
 	// piBG1 will hold all the same than proof.PiB but in G1 curve
 	piBG1 := [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 
-	for i := 0; i < circuit.NVars; i++ {
+	for i := 0; i < cir.NVars; i++ {
 		proof.PiA = Utils.Bn.G1.Add(proof.PiA, Utils.Bn.G1.MulScalar(setup.Pk.G1.At[i], w[i]))
 		piBG1 = Utils.Bn.G1.Add(piBG1, Utils.Bn.G1.MulScalar(setup.Pk.G1.BACGamma[i], w[i]))
 		proof.PiB = Utils.Bn.G2.Add(proof.PiB, Utils.Bn.G2.MulScalar(setup.Pk.G2.BACGamma[i], w[i]))
 	}
-	for i := circuit.NPublic + 1; i < circuit.NVars; i++ {
+	for i := cir.NPublic + 1; i < cir.NVars; i++ {
 		proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(setup.Pk.BACDelta[i], w[i]))
 	}
 
@@ -250,10 +248,10 @@ func (setup Groth16Setup) Generate(circuit circuit.Circuit, w []*big.Int, px []*
 }
 
 // Verify verifies over the BN128 the Pairings of the Proof
-func (setup Groth16Setup) Verify(circuit circuit.Circuit, proof Proof, publicSignals []*big.Int, debug bool) bool {
+func (setup Groth16Setup) Verify(proof Proof, publicSignals []*big.Int) (bool, error) {
 	pproof, ok := proof.(*Groth16Proof)
 	if !ok {
-		panic("bad proof")
+		return false, fmt.Errorf("bad proof type")
 	}
 
 	icPubl := setup.Vk.IC[0]
@@ -267,15 +265,11 @@ func (setup Groth16Setup) Verify(circuit circuit.Circuit, proof Proof, publicSig
 			Utils.Bn.Pairing(setup.Vk.G1.Alpha, setup.Vk.G2.Beta),
 			Utils.Bn.Fq12.Mul(
 				Utils.Bn.Pairing(icPubl, setup.Vk.G2.Gamma),
-				Utils.Bn.Pairing(pproof.PiC, setup.Vk.G2.Delta)))) {
-		if debug {
-			fmt.Println("❌ groth16 verification not passed")
-		}
-		return false
-	}
-	if debug {
-		fmt.Println("✓ groth16 verification passed")
+				Utils.Bn.Pairing(pproof.PiC, setup.Vk.G2.Delta),
+			),
+		)) {
+		return false, nil
 	}
 
-	return true
+	return true, nil
 }

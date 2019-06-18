@@ -1,10 +1,8 @@
-package r1csqap
+package fields
 
 import (
 	"bytes"
 	"math/big"
-
-	"github.com/arnaucube/go-snark/fields"
 )
 
 // Transpose transposes the *big.Int matrix
@@ -43,20 +41,20 @@ func BigArraysEqual(a, b []*big.Int) bool {
 	return true
 }
 
-// PolynomialField is the Polynomial over a Finite Field where the polynomial operations are performed
-type PolynomialField struct {
-	F fields.Fq
+// PF is the Polynomial over a Finite Field where the polynomial operations are performed
+type PF struct {
+	F Fq
 }
 
-// NewPolynomialField creates a new PolynomialField with the given FiniteField
-func NewPolynomialField(f fields.Fq) PolynomialField {
-	return PolynomialField{
+// NewPF creates a new PF with the given FiniteField
+func NewPF(f Fq) PF {
+	return PF{
 		f,
 	}
 }
 
 // Mul multiplies two polinomials over the Finite Field
-func (pf PolynomialField) Mul(a, b []*big.Int) []*big.Int {
+func (pf PF) Mul(a, b []*big.Int) []*big.Int {
 	r := ArrayOfBigZeros(len(a) + len(b) - 1)
 	for i := 0; i < len(a); i++ {
 		for j := 0; j < len(b); j++ {
@@ -69,7 +67,7 @@ func (pf PolynomialField) Mul(a, b []*big.Int) []*big.Int {
 }
 
 // Div divides two polinomials over the Finite Field, returning the result and the remainder
-func (pf PolynomialField) Div(a, b []*big.Int) ([]*big.Int, []*big.Int) {
+func (pf PF) Div(a, b []*big.Int) ([]*big.Int, []*big.Int) {
 	// https://en.wikipedia.org/wiki/Division_algorithm
 	r := ArrayOfBigZeros(len(a) - len(b) + 1)
 	rem := a
@@ -93,7 +91,7 @@ func max(a, b int) int {
 }
 
 // Add adds two polinomials over the Finite Field
-func (pf PolynomialField) Add(a, b []*big.Int) []*big.Int {
+func (pf PF) Add(a, b []*big.Int) []*big.Int {
 	r := ArrayOfBigZeros(max(len(a), len(b)))
 	for i := 0; i < len(a); i++ {
 		r[i] = pf.F.Add(r[i], a[i])
@@ -105,7 +103,7 @@ func (pf PolynomialField) Add(a, b []*big.Int) []*big.Int {
 }
 
 // Sub subtracts two polinomials over the Finite Field
-func (pf PolynomialField) Sub(a, b []*big.Int) []*big.Int {
+func (pf PF) Sub(a, b []*big.Int) []*big.Int {
 	r := ArrayOfBigZeros(max(len(a), len(b)))
 	for i := 0; i < len(a); i++ {
 		r[i] = pf.F.Add(r[i], a[i])
@@ -117,7 +115,7 @@ func (pf PolynomialField) Sub(a, b []*big.Int) []*big.Int {
 }
 
 // Eval evaluates the polinomial over the Finite Field at the given value x
-func (pf PolynomialField) Eval(v []*big.Int, x *big.Int) *big.Int {
+func (pf PF) Eval(v []*big.Int, x *big.Int) *big.Int {
 	r := big.NewInt(int64(0))
 	for i := 0; i < len(v); i++ {
 		xi := pf.F.Exp(x, big.NewInt(int64(i)))
@@ -128,7 +126,7 @@ func (pf PolynomialField) Eval(v []*big.Int, x *big.Int) *big.Int {
 }
 
 // NewPolZeroAt generates a new polynomial that has value zero at the given value
-func (pf PolynomialField) NewPolZeroAt(pointPos, totalPoints int, height *big.Int) []*big.Int {
+func (pf PF) NewPolZeroAt(pointPos, totalPoints int, height *big.Int) []*big.Int {
 	fac := 1
 	for i := 1; i < totalPoints+1; i++ {
 		if i != pointPos {
@@ -149,7 +147,7 @@ func (pf PolynomialField) NewPolZeroAt(pointPos, totalPoints int, height *big.In
 }
 
 // LagrangeInterpolation performs the Lagrange Interpolation / Lagrange Polynomials operation
-func (pf PolynomialField) LagrangeInterpolation(v []*big.Int) []*big.Int {
+func (pf PF) LagrangeInterpolation(v []*big.Int) []*big.Int {
 	// https://en.wikipedia.org/wiki/Lagrange_polynomial
 	var r []*big.Int
 	for i := 0; i < len(v); i++ {
@@ -159,38 +157,8 @@ func (pf PolynomialField) LagrangeInterpolation(v []*big.Int) []*big.Int {
 	return r
 }
 
-// R1CSToQAP converts the R1CS values to the QAP values
-func (pf PolynomialField) R1CSToQAP(a, b, c [][]*big.Int) ([][]*big.Int, [][]*big.Int, [][]*big.Int, []*big.Int) {
-	aT := Transpose(a)
-	bT := Transpose(b)
-	cT := Transpose(c)
-	var alphas [][]*big.Int
-	for i := 0; i < len(aT); i++ {
-		alphas = append(alphas, pf.LagrangeInterpolation(aT[i]))
-	}
-	var betas [][]*big.Int
-	for i := 0; i < len(bT); i++ {
-		betas = append(betas, pf.LagrangeInterpolation(bT[i]))
-	}
-	var gammas [][]*big.Int
-	for i := 0; i < len(cT); i++ {
-		gammas = append(gammas, pf.LagrangeInterpolation(cT[i]))
-	}
-	z := []*big.Int{big.NewInt(int64(1))}
-	for i := 1; i < len(alphas)-1; i++ {
-		z = pf.Mul(
-			z,
-			[]*big.Int{
-				pf.F.Neg(
-					big.NewInt(int64(i))),
-				big.NewInt(int64(1)),
-			})
-	}
-	return alphas, betas, gammas, z
-}
-
 // CombinePolynomials combine the given polynomials arrays into one, also returns the P(x)
-func (pf PolynomialField) CombinePolynomials(r []*big.Int, ap, bp, cp [][]*big.Int) ([]*big.Int, []*big.Int, []*big.Int, []*big.Int) {
+func (pf PF) CombinePolynomials(r []*big.Int, ap, bp, cp [][]*big.Int) ([]*big.Int, []*big.Int, []*big.Int, []*big.Int) {
 	var ax []*big.Int
 	for i := 0; i < len(r); i++ {
 		m := pf.Mul([]*big.Int{r[i]}, ap[i])
@@ -212,7 +180,7 @@ func (pf PolynomialField) CombinePolynomials(r []*big.Int, ap, bp, cp [][]*big.I
 }
 
 // DivisorPolynomial returns the divisor polynomial given two polynomials
-func (pf PolynomialField) DivisorPolynomial(px, z []*big.Int) []*big.Int {
+func (pf PF) DivisorPolynomial(px, z []*big.Int) []*big.Int {
 	quo, _ := pf.Div(px, z)
 	return quo
 }
