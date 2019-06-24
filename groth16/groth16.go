@@ -24,20 +24,20 @@ type Setup struct {
 
 	// public
 	Pk struct { // Proving Key
-		BACDelta [][3]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to l
+		BACDelta [][3]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / δ } from l+1 to m
 		Z        []*big.Int
 		G1       struct {
 			Alpha    [3]*big.Int
 			Beta     [3]*big.Int
 			Delta    [3]*big.Int
 			At       [][3]*big.Int // {a(τ)} from 0 to m
-			BACGamma [][3]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / δ } from l+1 to m
+			BACGamma [][3]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to m
 		}
 		G2 struct {
 			Beta     [3][2]*big.Int
 			Gamma    [3][2]*big.Int
 			Delta    [3][2]*big.Int
-			BACGamma [][3][2]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / δ } from l+1 to m
+			BACGamma [][3][2]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to m
 		}
 		PowersTauDelta [][3]*big.Int // powers of τ encrypted in G1 curve, divided by δ
 	}
@@ -165,9 +165,9 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 		bt := Utils.PF.Eval(betas[i], setup.Toxic.T)
 		g1bt := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, bt)
 		g2bt := Utils.Bn.G2.MulScalar(Utils.Bn.G2.G, bt)
-		// G1.BACGamma: {( βui(x)+αvi(x)+wi(x) ) / δ } from l+1 to m in G1
+		// G1.BACGamma: {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to m in G1
 		setup.Pk.G1.BACGamma = append(setup.Pk.G1.BACGamma, g1bt)
-		// G2.BACGamma: {( βui(x)+αvi(x)+wi(x) ) / δ } from l+1 to m in G2
+		// G2.BACGamma: {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to m in G2
 		setup.Pk.G2.BACGamma = append(setup.Pk.G2.BACGamma, g2bt)
 	}
 
@@ -192,7 +192,7 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 		)
 		g1c := Utils.Bn.G1.MulScalar(Utils.Bn.G1.G, c)
 
-		// Pk.BACDelta: {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to l
+		// Pk.BACDelta: {( βui(x)+αvi(x)+wi(x) ) / δ } from l+1 to m
 		setup.Pk.BACDelta = append(setup.Pk.BACDelta, g1c)
 	}
 

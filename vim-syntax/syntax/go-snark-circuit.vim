@@ -24,6 +24,7 @@ syn keyword goSnarkCircuitPrivatePublic		private public
 syn keyword goSnarkCircuitOut	out
 syn keyword goSnarkCircuitEquals	equals
 syn keyword goSnarkCircuitFunction	func
+syn keyword goSnarkCircuitStatement	return
 syn keyword goSnarkCircuitImport	import
 syn match goSnarkCircuitFuncCall /\<\K\k*\ze\s*(/
 syn keyword goSnarkCircuitPrivate private nextgroup=goSnarkCircuitInputName skipwhite
@@ -46,6 +47,7 @@ hi def link goSnarkCircuitOpSymbols		Operator
 hi def link goSnarkCircuitFuncCall		Function
 hi def link goSnarkCircuitEquals		Identifier
 hi def link goSnarkCircuitFunction		Keyword
+hi def link goSnarkCircuitStatement		Statement
 hi def link goSnarkCircuitImport		Keyword
 hi def link goSnarkCircuitBraces		Function
 hi def link goSnarkCircuitPrivate 		Keyword

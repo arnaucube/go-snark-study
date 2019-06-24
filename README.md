@@ -40,7 +40,11 @@ Improvements from the minimal implementation:
 - [ ] move witness values calculation outside the setup phase
 - [x] Groth16
 - [ ] multiple optimizations
+- [x] wasm proof generation
+- [ ] wasm proof verification
 
+## WASM usage
+Ongoing experimentation with go-snark compiled to wasm: https://github.com/arnaucube/go-snark/tree/master/wasm
 
 ## Usage
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark?status.svg)](https://godoc.org/github.com/arnaucube/go-snark) zkSnark
@@ -87,6 +91,10 @@ In the command line, execute:
 ```
 > ./go-snark-cli compile test.circuit
 ```
+If you want to have the wasm input ready also, add the flag `wasm`
+```
+> ./go-snark-cli compile test.circuit wasm
+```
 
 This will output the `compiledcircuit.json` file.
 
@@ -97,6 +105,10 @@ Having the `compiledcircuit.json`, now we can generate the `TrustedSetup`:
 ```
 This will create the file `trustedsetup.json` with the TrustedSetup data, and also a `toxic.json` file, with the parameters to delete from the `Trusted Setup`.
 
+If you want to have the wasm input ready also, add the flag `wasm`
+```
+> ./go-snark-cli trustedsetup wasm
+```
 
 #### Generate Proofs
 Assumming that we have the `compiledcircuit.json`, `trustedsetup.json`, `privateInputs.json` and the `publicInputs.json` we can now generate the `Proofs` with the following command:

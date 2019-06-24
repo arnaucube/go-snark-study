@@ -5,3 +5,6 @@ go:
 
 env:
   - GO111MODULE=on
+
+before_install: rm wasm/go-snark-wasm-wrapper.go
+

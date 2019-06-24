@@ -1,0 +1,19 @@
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>go-snark wasm experiments</title>
+</head>
+<body>
+	<script src="wasm_exec.js"></script>
+	<script>
+		const go = new Go();
+		WebAssembly.instantiateStreaming(fetch('go-snark.wasm'), go.importObject).then(function(dat) {
+		    go.run(dat.instance);
+		});
+	</script>
+	<button onClick="callGenerateProof();">Generate Proof</button>
+	<textarea id="proofResult" rows="15" style="width: 80%;">
+	</textarea>
+	<script src="index.js"></script>
+</body>
+</html>

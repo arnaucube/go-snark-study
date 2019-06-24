@@ -15,6 +15,7 @@ import (
 	"github.com/arnaucube/go-snark/circuitcompiler"
 	"github.com/arnaucube/go-snark/groth16"
 	"github.com/arnaucube/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark/wasm/utils"
 	"github.com/urfave/cli"
 )
 
@@ -95,6 +96,11 @@ func CompileCircuit(context *cli.Context) error {
 	fmt.Println("cli")
 
 	circuitPath := context.Args().Get(0)
+
+	wasmFlag := false
+	if context.Args().Get(1) == "wasm" {
+		wasmFlag = true
+	}
 
 	// read circuit file
 	circuitFile, err := os.Open(circuitPath)
@@ -185,10 +191,48 @@ func CompileCircuit(context *cli.Context) error {
 	jsonFile.Close()
 	fmt.Println("Compiled Circuit data written to ", jsonFile.Name())
 
+	if wasmFlag {
+		circuitString := utils.CircuitToString(*circuit)
+		jsonData, err := json.Marshal(circuitString)
+		panicErr(err)
+		// store setup into file
+		jsonFile, err := os.Create("compiledcircuitString.json")
+		panicErr(err)
+		defer jsonFile.Close()
+		jsonFile.Write(jsonData)
+		jsonFile.Close()
+	}
+
+	// store px
+	jsonData, err = json.Marshal(px)
+	panicErr(err)
+	// store setup into file
+	jsonFile, err = os.Create("px.json")
+	panicErr(err)
+	defer jsonFile.Close()
+	jsonFile.Write(jsonData)
+	jsonFile.Close()
+	fmt.Println("Px data written to ", jsonFile.Name())
+	if wasmFlag {
+		pxString := utils.ArrayBigIntToString(px)
+		jsonData, err = json.Marshal(pxString)
+		panicErr(err)
+		// store setup into file
+		jsonFile, err = os.Create("pxString.json")
+		panicErr(err)
+		defer jsonFile.Close()
+		jsonFile.Write(jsonData)
+		jsonFile.Close()
+	}
+
 	return nil
 }
 
 func TrustedSetup(context *cli.Context) error {
+	wasmFlag := false
+	if context.Args().Get(0) == "wasm" {
+		wasmFlag = true
+	}
 	// open compiledcircuit.json
 	compiledcircuitFile, err := ioutil.ReadFile("compiledcircuit.json")
 	panicErr(err)
@@ -243,6 +287,17 @@ func TrustedSetup(context *cli.Context) error {
 	jsonFile.Write(jsonData)
 	jsonFile.Close()
 	fmt.Println("Trusted Setup data written to ", jsonFile.Name())
+	if wasmFlag {
+		tsetupString := utils.SetupToString(tsetup)
+		jsonData, err := json.Marshal(tsetupString)
+		panicErr(err)
+		// store setup into file
+		jsonFile, err := os.Create("trustedsetupString.json")
+		panicErr(err)
+		defer jsonFile.Close()
+		jsonFile.Write(jsonData)
+		jsonFile.Close()
+	}
 	return nil
 }
 
