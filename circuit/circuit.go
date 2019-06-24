@@ -81,7 +81,7 @@ func insertVarNeg(arr []*big.Int, signals []string, v string, used map[string]bo
 }
 
 // GenerateR1CS generates the R1CS polynomials from the Circuit
-func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
+func (cir *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 	// from flat code to R1CS
 
 	var a [][]*big.Int
@@ -89,10 +89,10 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 	var c [][]*big.Int
 
 	used := make(map[string]bool)
-	for _, constraint := range circ.Constraints {
-		aConstraint := fields.ArrayOfBigZeros(len(circ.Signals))
-		bConstraint := fields.ArrayOfBigZeros(len(circ.Signals))
-		cConstraint := fields.ArrayOfBigZeros(len(circ.Signals))
+	for _, constraint := range cir.Constraints {
+		aConstraint := fields.ArrayOfBigZeros(len(cir.Signals))
+		bConstraint := fields.ArrayOfBigZeros(len(cir.Signals))
+		cConstraint := fields.ArrayOfBigZeros(len(cir.Signals))
 
 		// if existInArray(constraint.Out) {
 		// if used[constraint.Out] {
@@ -100,31 +100,31 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 		// }
 		used[constraint.Out] = true
 		if constraint.Op == "in" {
-			for i := 0; i <= len(circ.PublicInputs); i++ {
-				aConstraint[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Add(aConstraint[indexInArray(circ.Signals, constraint.Out)], big.NewInt(int64(1)))
-				aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.Out, used)
+			for i := 0; i <= len(cir.PublicInputs); i++ {
+				aConstraint[indexInArray(cir.Signals, constraint.Out)] = new(big.Int).Add(aConstraint[indexInArray(cir.Signals, constraint.Out)], big.NewInt(int64(1)))
+				aConstraint, used = insertVar(aConstraint, cir.Signals, constraint.Out, used)
 				bConstraint[0] = big.NewInt(int64(1))
 			}
 			continue
 
 		} else if constraint.Op == "+" {
-			cConstraint[indexInArray(circ.Signals, constraint.Out)] = big.NewInt(int64(1))
-			aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.V1, used)
-			aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.V2, used)
+			cConstraint[indexInArray(cir.Signals, constraint.Out)] = big.NewInt(int64(1))
+			aConstraint, used = insertVar(aConstraint, cir.Signals, constraint.V1, used)
+			aConstraint, used = insertVar(aConstraint, cir.Signals, constraint.V2, used)
 			bConstraint[0] = big.NewInt(int64(1))
 		} else if constraint.Op == "-" {
-			cConstraint[indexInArray(circ.Signals, constraint.Out)] = big.NewInt(int64(1))
-			aConstraint, used = insertVarNeg(aConstraint, circ.Signals, constraint.V1, used)
-			aConstraint, used = insertVarNeg(aConstraint, circ.Signals, constraint.V2, used)
+			cConstraint[indexInArray(cir.Signals, constraint.Out)] = big.NewInt(int64(1))
+			aConstraint, used = insertVarNeg(aConstraint, cir.Signals, constraint.V1, used)
+			aConstraint, used = insertVarNeg(aConstraint, cir.Signals, constraint.V2, used)
 			bConstraint[0] = big.NewInt(int64(1))
 		} else if constraint.Op == "*" {
-			cConstraint[indexInArray(circ.Signals, constraint.Out)] = big.NewInt(int64(1))
-			aConstraint, used = insertVar(aConstraint, circ.Signals, constraint.V1, used)
-			bConstraint, used = insertVar(bConstraint, circ.Signals, constraint.V2, used)
+			cConstraint[indexInArray(cir.Signals, constraint.Out)] = big.NewInt(int64(1))
+			aConstraint, used = insertVar(aConstraint, cir.Signals, constraint.V1, used)
+			bConstraint, used = insertVar(bConstraint, cir.Signals, constraint.V2, used)
 		} else if constraint.Op == "/" {
-			cConstraint, used = insertVar(cConstraint, circ.Signals, constraint.V1, used)
-			cConstraint[indexInArray(circ.Signals, constraint.Out)] = big.NewInt(int64(1))
-			bConstraint, used = insertVar(bConstraint, circ.Signals, constraint.V2, used)
+			cConstraint, used = insertVar(cConstraint, cir.Signals, constraint.V1, used)
+			cConstraint[indexInArray(cir.Signals, constraint.Out)] = big.NewInt(int64(1))
+			bConstraint, used = insertVar(bConstraint, cir.Signals, constraint.V2, used)
 		}
 
 		a = append(a, aConstraint)
@@ -132,9 +132,9 @@ func (circ *Circuit) GenerateR1CS() ([][]*big.Int, [][]*big.Int, [][]*big.Int) {
 		c = append(c, cConstraint)
 
 	}
-	circ.R1CS.A = a
-	circ.R1CS.B = b
-	circ.R1CS.C = c
+	cir.R1CS.A = a
+	cir.R1CS.B = b
+	cir.R1CS.C = c
 	return a, b, c
 }
 
@@ -155,14 +155,14 @@ type Inputs struct {
 
 // CalculateWitness calculates the Witness of a Circuit based on the given inputs
 // witness = [ one, output, publicInputs, privateInputs, ...]
-func (circ *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*big.Int) ([]*big.Int, error) {
-	if len(privateInputs) != len(circ.PrivateInputs) {
+func (cir *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*big.Int) ([]*big.Int, error) {
+	if len(privateInputs) != len(cir.PrivateInputs) {
 		return []*big.Int{}, errors.New("given privateInputs != circuit.PublicInputs")
 	}
-	if len(publicInputs) != len(circ.PublicInputs) {
+	if len(publicInputs) != len(cir.PublicInputs) {
 		return []*big.Int{}, errors.New("given publicInputs != circuit.PublicInputs")
 	}
-	w := fields.ArrayOfBigZeros(len(circ.Signals))
+	w := fields.ArrayOfBigZeros(len(cir.Signals))
 	w[0] = big.NewInt(int64(1))
 	for i, input := range publicInputs {
 		w[i+1] = input
@@ -170,16 +170,16 @@ func (circ *Circuit) CalculateWitness(privateInputs []*big.Int, publicInputs []*
 	for i, input := range privateInputs {
 		w[i+len(publicInputs)+1] = input
 	}
-	for _, constraint := range circ.Constraints {
+	for _, constraint := range cir.Constraints {
 		if constraint.Op == "in" {
 		} else if constraint.Op == "+" {
-			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Add(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
+			w[indexInArray(cir.Signals, constraint.Out)] = new(big.Int).Add(grabVar(cir.Signals, w, constraint.V1), grabVar(cir.Signals, w, constraint.V2))
 		} else if constraint.Op == "-" {
-			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Sub(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
+			w[indexInArray(cir.Signals, constraint.Out)] = new(big.Int).Sub(grabVar(cir.Signals, w, constraint.V1), grabVar(cir.Signals, w, constraint.V2))
 		} else if constraint.Op == "*" {
-			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Mul(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
+			w[indexInArray(cir.Signals, constraint.Out)] = new(big.Int).Mul(grabVar(cir.Signals, w, constraint.V1), grabVar(cir.Signals, w, constraint.V2))
 		} else if constraint.Op == "/" {
-			w[indexInArray(circ.Signals, constraint.Out)] = new(big.Int).Div(grabVar(circ.Signals, w, constraint.V1), grabVar(circ.Signals, w, constraint.V2))
+			w[indexInArray(cir.Signals, constraint.Out)] = new(big.Int).Div(grabVar(cir.Signals, w, constraint.V1), grabVar(cir.Signals, w, constraint.V2))
 		}
 	}
 	return w, nil
