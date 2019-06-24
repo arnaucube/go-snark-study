@@ -12,15 +12,7 @@ Add the file `wasm_exec.js` in the directory:
 cp "$(go env GOROOT)/misc/wasm/wasm_exec.js" .
 ```
 
-Call the library from javascript:
-```js
-let r = generateProofs(
-	JSON.stringify(circuit),
-	JSON.stringify(setup),
-	JSON.stringify(px),
-	JSON.stringify(inputs),
-);
-```
+To see the usage from javascript, check `index.js` file.
 
 Run the http server that allows to load the `.wasm` file:
 ```

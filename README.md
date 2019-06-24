@@ -41,7 +41,7 @@ Improvements from the minimal implementation:
 - [x] Groth16
 - [ ] multiple optimizations
 - [x] wasm proof generation
-- [ ] wasm proof verification
+- [x] wasm proof verification
 
 ## WASM usage
 Ongoing experimentation with go-snark compiled to wasm: https://github.com/arnaucube/go-snark/tree/master/wasm

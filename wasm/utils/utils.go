@@ -169,6 +169,14 @@ func SetupToString(setup snark.Setup) SetupString {
 	s.Pk.Bp = Array3BigIntToString(setup.Pk.Bp)
 	s.Pk.Cp = Array3BigIntToString(setup.Pk.Cp)
 	s.Pk.Z = ArrayBigIntToString(setup.Pk.Z)
+	s.Vk.Vka = BigInt32ToString(setup.Vk.Vka)
+	s.Vk.Vkb = BigInt3ToString(setup.Vk.Vkb)
+	s.Vk.Vkc = BigInt32ToString(setup.Vk.Vkc)
+	s.Vk.IC = Array3BigIntToString(setup.Vk.IC)
+	s.Vk.G1Kbg = BigInt3ToString(setup.Vk.G1Kbg)
+	s.Vk.G2Kbg = BigInt32ToString(setup.Vk.G2Kbg)
+	s.Vk.G2Kg = BigInt32ToString(setup.Vk.G2Kg)
+	s.Vk.Vkz = BigInt32ToString(setup.Vk.Vkz)
 	return s
 }
 func SetupFromString(s SetupString) (snark.Setup, error) {
@@ -214,6 +222,40 @@ func SetupFromString(s SetupString) (snark.Setup, error) {
 	if err != nil {
 		return o, err
 	}
+
+	o.Vk.Vka, err = String32ToBigInt(s.Vk.Vka)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.Vkb, err = String3ToBigInt(s.Vk.Vkb)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.Vkc, err = String32ToBigInt(s.Vk.Vkc)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.IC, err = Array3StringToBigInt(s.Vk.IC)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.G1Kbg, err = String3ToBigInt(s.Vk.G1Kbg)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.G2Kbg, err = String32ToBigInt(s.Vk.G2Kbg)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.G2Kg, err = String32ToBigInt(s.Vk.G2Kg)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.Vkz, err = String32ToBigInt(s.Vk.Vkz)
+	if err != nil {
+		return o, err
+	}
+
 	return o, nil
 
 }
