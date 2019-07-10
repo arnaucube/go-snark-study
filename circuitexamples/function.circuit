@@ -1,4 +1,4 @@
-func test(private s0, public s1):
+func main(private s0, public s1):
 	s2 = s0 * s0
 	s3 = s2 * s0
 	s4 = s3 + s0

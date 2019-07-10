@@ -1,6 +1,8 @@
 # go-snark wasm
 *Warning: this is an ongoing experimentation*
 
+WASM wrappers for zkSNARK Pinocchio & Groth16 protocols.
+
 ## Wasm usage
 To compile to wasm, inside the `wasm` directory, execute:
 ```

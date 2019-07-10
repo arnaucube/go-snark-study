@@ -6,6 +6,7 @@ import (
 
 	snark "github.com/arnaucube/go-snark"
 	"github.com/arnaucube/go-snark/circuitcompiler"
+	"github.com/arnaucube/go-snark/groth16"
 )
 
 // []*big.Int
@@ -396,6 +397,166 @@ func ProofFromString(s ProofString) (snark.Proof, error) {
 		return p, err
 	}
 	p.PiKp, err = String3ToBigInt(s.PiKp)
+	if err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// groth
+type GrothSetupString struct {
+	Pk struct { // Proving Key
+		BACDelta [][3]string
+		Z        []string
+		G1       struct {
+			Alpha    [3]string
+			Beta     [3]string
+			Delta    [3]string
+			At       [][3]string
+			BACGamma [][3]string
+		}
+		G2 struct {
+			Beta     [3][2]string
+			Gamma    [3][2]string
+			Delta    [3][2]string
+			BACGamma [][3][2]string
+		}
+		PowersTauDelta [][3]string
+	}
+	Vk struct {
+		IC [][3]string
+		G1 struct {
+			Alpha [3]string
+		}
+		G2 struct {
+			Beta  [3][2]string
+			Gamma [3][2]string
+			Delta [3][2]string
+		}
+	}
+}
+
+func GrothSetupToString(setup groth16.Setup) GrothSetupString {
+	var s GrothSetupString
+	s.Pk.BACDelta = Array3BigIntToString(setup.Pk.BACDelta)
+	s.Pk.Z = ArrayBigIntToString(setup.Pk.Z)
+	s.Pk.G1.Alpha = BigInt3ToString(setup.Pk.G1.Alpha)
+	s.Pk.G1.Beta = BigInt3ToString(setup.Pk.G1.Beta)
+	s.Pk.G1.Delta = BigInt3ToString(setup.Pk.G1.Delta)
+	s.Pk.G1.At = Array3BigIntToString(setup.Pk.G1.At)
+	s.Pk.G1.BACGamma = Array3BigIntToString(setup.Pk.G1.BACGamma)
+	s.Pk.G2.Beta = BigInt32ToString(setup.Pk.G2.Beta)
+	s.Pk.G2.Gamma = BigInt32ToString(setup.Pk.G2.Gamma)
+	s.Pk.G2.Delta = BigInt32ToString(setup.Pk.G2.Delta)
+	s.Pk.G2.BACGamma = Array32BigIntToString(setup.Pk.G2.BACGamma)
+	s.Pk.PowersTauDelta = Array3BigIntToString(setup.Pk.PowersTauDelta)
+	s.Vk.IC = Array3BigIntToString(setup.Vk.IC)
+	s.Vk.G1.Alpha = BigInt3ToString(setup.Vk.G1.Alpha)
+	s.Vk.G2.Beta = BigInt32ToString(setup.Vk.G2.Beta)
+	s.Vk.G2.Gamma = BigInt32ToString(setup.Vk.G2.Gamma)
+	s.Vk.G2.Delta = BigInt32ToString(setup.Vk.G2.Delta)
+	return s
+}
+func GrothSetupFromString(s GrothSetupString) (groth16.Setup, error) {
+	var o groth16.Setup
+	var err error
+	o.Pk.BACDelta, err = Array3StringToBigInt(s.Pk.BACDelta)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.Z, err = ArrayStringToBigInt(s.Pk.Z)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G1.Alpha, err = String3ToBigInt(s.Pk.G1.Alpha)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G1.Beta, err = String3ToBigInt(s.Pk.G1.Beta)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G1.Delta, err = String3ToBigInt(s.Pk.G1.Delta)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G1.At, err = Array3StringToBigInt(s.Pk.G1.At)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G1.BACGamma, err = Array3StringToBigInt(s.Pk.G1.BACGamma)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G2.Beta, err = String32ToBigInt(s.Pk.G2.Beta)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G2.Gamma, err = String32ToBigInt(s.Pk.G2.Gamma)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G2.Delta, err = String32ToBigInt(s.Pk.G2.Delta)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.G2.BACGamma, err = Array32StringToBigInt(s.Pk.G2.BACGamma)
+	if err != nil {
+		return o, err
+	}
+	o.Pk.PowersTauDelta, err = Array3StringToBigInt(s.Pk.PowersTauDelta)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.IC, err = Array3StringToBigInt(s.Vk.IC)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.G1.Alpha, err = String3ToBigInt(s.Vk.G1.Alpha)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.G2.Beta, err = String32ToBigInt(s.Vk.G2.Beta)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.G2.Gamma, err = String32ToBigInt(s.Vk.G2.Gamma)
+	if err != nil {
+		return o, err
+	}
+	o.Vk.G2.Delta, err = String32ToBigInt(s.Vk.G2.Delta)
+	if err != nil {
+		return o, err
+	}
+	return o, nil
+}
+
+type GrothProofString struct {
+	PiA [3]string
+	PiB [3][2]string
+	PiC [3]string
+}
+
+func GrothProofToString(p groth16.Proof) GrothProofString {
+	var s GrothProofString
+	s.PiA = BigInt3ToString(p.PiA)
+	s.PiB = BigInt32ToString(p.PiB)
+	s.PiC = BigInt3ToString(p.PiC)
+	return s
+}
+func GrothProofFromString(s GrothProofString) (groth16.Proof, error) {
+	var p groth16.Proof
+	var err error
+
+	p.PiA, err = String3ToBigInt(s.PiA)
+	if err != nil {
+		return p, err
+	}
+	p.PiB, err = String32ToBigInt(s.PiB)
+	if err != nil {
+		return p, err
+	}
+	p.PiC, err = String3ToBigInt(s.PiC)
 	if err != nil {
 		return p, err
 	}
