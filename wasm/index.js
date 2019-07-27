@@ -21,7 +21,6 @@ function callGenerateProof() {
 function callVerifyProof() {
 	const proof = document.getElementById("proofResult").value;
 	let r = verifyProofs(
-		JSON.stringify(circuit),
 		JSON.stringify(setup),
 		proof,
 		JSON.stringify([35])

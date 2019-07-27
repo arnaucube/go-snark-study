@@ -374,13 +374,6 @@ func VerifyProofs(context *cli.Context) error {
 	json.Unmarshal([]byte(string(proofsFile)), &proof)
 	panicErr(err)
 
-	// open compiledcircuit.json
-	compiledcircuitFile, err := ioutil.ReadFile("compiledcircuit.json")
-	panicErr(err)
-	var circuit circuitcompiler.Circuit
-	json.Unmarshal([]byte(string(compiledcircuitFile)), &circuit)
-	panicErr(err)
-
 	// open trustedsetup.json
 	trustedsetupFile, err := ioutil.ReadFile("trustedsetup.json")
 	panicErr(err)
@@ -395,7 +388,7 @@ func VerifyProofs(context *cli.Context) error {
 	err = json.Unmarshal([]byte(string(publicInputsFile)), &publicSignals)
 	panicErr(err)
 
-	verified := snark.VerifyProof(circuit, trustedsetup, proof, publicSignals, true)
+	verified := snark.VerifyProof(trustedsetup, proof, publicSignals, true)
 	if !verified {
 		fmt.Println("ERROR: proofs not verified")
 	} else {
@@ -533,13 +526,6 @@ func Groth16VerifyProofs(context *cli.Context) error {
 	json.Unmarshal([]byte(string(proofsFile)), &proof)
 	panicErr(err)
 
-	// open compiledcircuit.json
-	compiledcircuitFile, err := ioutil.ReadFile("compiledcircuit.json")
-	panicErr(err)
-	var circuit circuitcompiler.Circuit
-	json.Unmarshal([]byte(string(compiledcircuitFile)), &circuit)
-	panicErr(err)
-
 	// open trustedsetup.json
 	trustedsetupFile, err := ioutil.ReadFile("trustedsetup.json")
 	panicErr(err)
@@ -554,7 +540,7 @@ func Groth16VerifyProofs(context *cli.Context) error {
 	err = json.Unmarshal([]byte(string(publicInputsFile)), &publicSignals)
 	panicErr(err)
 
-	verified := groth16.VerifyProof(circuit, trustedsetup, proof, publicSignals, true)
+	verified := groth16.VerifyProof(trustedsetup, proof, publicSignals, true)
 	if !verified {
 		fmt.Println("ERROR: proofs not verified")
 	} else {

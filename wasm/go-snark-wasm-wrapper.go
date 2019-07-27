@@ -94,20 +94,9 @@ func generateProofs(this js.Value, i []js.Value) interface{} {
 }
 
 func verifyProofs(this js.Value, i []js.Value) interface{} {
-	var circuitStr utils.CircuitString
-	err := json.Unmarshal([]byte(i[0].String()), &circuitStr)
-	if err != nil {
-		println(i[0].String())
-		println("error parsing circuit from stringified json")
-	}
-	circuit, err := utils.CircuitFromString(circuitStr)
-	if err != nil {
-		println("error " + err.Error())
-	}
-
 	var setupStr utils.SetupString
-	println(i[1].String())
-	err = json.Unmarshal([]byte(i[1].String()), &setupStr)
+	println(i[0].String())
+	err := json.Unmarshal([]byte(i[0].String()), &setupStr)
 	if err != nil {
 		println("error parsing setup from stringified json")
 	}
@@ -117,9 +106,9 @@ func verifyProofs(this js.Value, i []js.Value) interface{} {
 	}
 
 	var proofStr utils.ProofString
-	err = json.Unmarshal([]byte(i[2].String()), &proofStr)
+	err = json.Unmarshal([]byte(i[1].String()), &proofStr)
 	if err != nil {
-		println(i[0].String())
+		println(i[1].String())
 		println("error parsing proof from stringified json")
 	}
 	proof, err := utils.ProofFromString(proofStr)
@@ -128,13 +117,13 @@ func verifyProofs(this js.Value, i []js.Value) interface{} {
 	}
 
 	var publicInputs []*big.Int
-	err = json.Unmarshal([]byte(i[3].String()), &publicInputs)
+	err = json.Unmarshal([]byte(i[2].String()), &publicInputs)
 	if err != nil {
-		println(i[0].String())
+		println(i[2].String())
 		println("error parsing publicInputs from stringified json")
 	}
 
-	verified := snark.VerifyProof(circuit, setup, proof, publicInputs, false)
+	verified := snark.VerifyProof(setup, proof, publicInputs, false)
 	if err != nil {
 		println("error verifiyng proof", err)
 	}
@@ -215,20 +204,9 @@ func grothGenerateProofs(this js.Value, i []js.Value) interface{} {
 }
 
 func grothVerifyProofs(this js.Value, i []js.Value) interface{} {
-	var circuitStr utils.CircuitString
-	err := json.Unmarshal([]byte(i[0].String()), &circuitStr)
-	if err != nil {
-		println(i[0].String())
-		println("error parsing circuit from stringified json")
-	}
-	circuit, err := utils.CircuitFromString(circuitStr)
-	if err != nil {
-		println("error " + err.Error())
-	}
-
 	var setupStr utils.GrothSetupString
-	println(i[1].String())
-	err = json.Unmarshal([]byte(i[1].String()), &setupStr)
+	println(i[0].String())
+	err := json.Unmarshal([]byte(i[0].String()), &setupStr)
 	if err != nil {
 		println("error parsing setup from stringified json")
 	}
@@ -238,9 +216,9 @@ func grothVerifyProofs(this js.Value, i []js.Value) interface{} {
 	}
 
 	var proofStr utils.GrothProofString
-	err = json.Unmarshal([]byte(i[2].String()), &proofStr)
+	err = json.Unmarshal([]byte(i[1].String()), &proofStr)
 	if err != nil {
-		println(i[0].String())
+		println(i[1].String())
 		println("error parsing proof from stringified json")
 	}
 	proof, err := utils.GrothProofFromString(proofStr)
@@ -249,13 +227,13 @@ func grothVerifyProofs(this js.Value, i []js.Value) interface{} {
 	}
 
 	var publicInputs []*big.Int
-	err = json.Unmarshal([]byte(i[3].String()), &publicInputs)
+	err = json.Unmarshal([]byte(i[2].String()), &publicInputs)
 	if err != nil {
-		println(i[0].String())
+		println(i[2].String())
 		println("error parsing publicInputs from stringified json")
 	}
 
-	verified := groth16.VerifyProof(circuit, setup, proof, publicInputs, false)
+	verified := groth16.VerifyProof(setup, proof, publicInputs, false)
 	if err != nil {
 		println("error verifiyng proof", err)
 	}

@@ -286,7 +286,7 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, 
 }
 
 // VerifyProof verifies over the BN128 the Pairings of the Proof
-func VerifyProof(circuit circuitcompiler.Circuit, setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
+func VerifyProof(setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
 	// e(piA, Va) == e(piA', g2)
 	pairingPiaVa := Utils.Bn.Pairing(proof.PiA, setup.Vk.Vka)
 	pairingPiapG2 := Utils.Bn.Pairing(proof.PiAp, Utils.Bn.G2.G)

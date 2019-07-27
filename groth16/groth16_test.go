@@ -97,11 +97,11 @@ func TestGroth16MinimalFlow(t *testing.T) {
 	b35Verif := big.NewInt(int64(35))
 	publicSignalsVerif := []*big.Int{b35Verif}
 	before := time.Now()
-	assert.True(t, VerifyProof(*circuit, setup, proof, publicSignalsVerif, true))
+	assert.True(t, VerifyProof(setup, proof, publicSignalsVerif, true))
 	fmt.Println("verify proof time elapsed:", time.Since(before))
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(34))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !VerifyProof(*circuit, setup, proof, wrongPublicSignalsVerif, false))
+	assert.True(t, !VerifyProof(setup, proof, wrongPublicSignalsVerif, false))
 }
