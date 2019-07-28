@@ -134,17 +134,16 @@ func Array32BigIntToString(b [][3][2]*big.Int) [][3][2]string {
 // Setup
 type SetupString struct {
 	// public
-	G1T [][3]string
-	G2T [][3][2]string
-	Pk  struct {
-		A  [][3]string
-		B  [][3][2]string
-		C  [][3]string
-		Kp [][3]string
-		Ap [][3]string
-		Bp [][3]string
-		Cp [][3]string
-		Z  []string
+	Pk struct {
+		G1T [][3]string
+		A   [][3]string
+		B   [][3][2]string
+		C   [][3]string
+		Kp  [][3]string
+		Ap  [][3]string
+		Bp  [][3]string
+		Cp  [][3]string
+		Z   []string
 	}
 	Vk struct {
 		Vka   [3][2]string
@@ -160,8 +159,7 @@ type SetupString struct {
 
 func SetupToString(setup snark.Setup) SetupString {
 	var s SetupString
-	s.G1T = Array3BigIntToString(setup.G1T)
-	s.G2T = Array32BigIntToString(setup.G2T)
+	s.Pk.G1T = Array3BigIntToString(setup.Pk.G1T)
 	s.Pk.A = Array3BigIntToString(setup.Pk.A)
 	s.Pk.B = Array32BigIntToString(setup.Pk.B)
 	s.Pk.C = Array3BigIntToString(setup.Pk.C)
@@ -183,11 +181,7 @@ func SetupToString(setup snark.Setup) SetupString {
 func SetupFromString(s SetupString) (snark.Setup, error) {
 	var o snark.Setup
 	var err error
-	o.G1T, err = Array3StringToBigInt(s.G1T)
-	if err != nil {
-		return o, err
-	}
-	o.G2T, err = Array32StringToBigInt(s.G2T)
+	o.Pk.G1T, err = Array3StringToBigInt(s.Pk.G1T)
 	if err != nil {
 		return o, err
 	}

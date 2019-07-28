@@ -12,6 +12,36 @@ import (
 	"github.com/arnaucube/go-snark/r1csqap"
 )
 
+type Pk struct { // Proving Key
+	BACDelta [][3]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / δ } from l+1 to m
+	Z        []*big.Int
+	G1       struct {
+		Alpha    [3]*big.Int
+		Beta     [3]*big.Int
+		Delta    [3]*big.Int
+		At       [][3]*big.Int // {a(τ)} from 0 to m
+		BACGamma [][3]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to m
+	}
+	G2 struct {
+		Beta     [3][2]*big.Int
+		Gamma    [3][2]*big.Int
+		Delta    [3][2]*big.Int
+		BACGamma [][3][2]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to m
+	}
+	PowersTauDelta [][3]*big.Int // powers of τ encrypted in G1 curve, divided by δ
+}
+type Vk struct {
+	IC [][3]*big.Int
+	G1 struct {
+		Alpha [3]*big.Int
+	}
+	G2 struct {
+		Beta  [3][2]*big.Int
+		Gamma [3][2]*big.Int
+		Delta [3][2]*big.Int
+	}
+}
+
 // Setup is the data structure holding the Trusted Setup data. The Setup.Toxic sub struct must be destroyed after the GenerateTrustedSetup function is completed
 type Setup struct {
 	Toxic struct {
@@ -23,35 +53,8 @@ type Setup struct {
 	}
 
 	// public
-	Pk struct { // Proving Key
-		BACDelta [][3]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / δ } from l+1 to m
-		Z        []*big.Int
-		G1       struct {
-			Alpha    [3]*big.Int
-			Beta     [3]*big.Int
-			Delta    [3]*big.Int
-			At       [][3]*big.Int // {a(τ)} from 0 to m
-			BACGamma [][3]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to m
-		}
-		G2 struct {
-			Beta     [3][2]*big.Int
-			Gamma    [3][2]*big.Int
-			Delta    [3][2]*big.Int
-			BACGamma [][3][2]*big.Int // {( βui(x)+αvi(x)+wi(x) ) / γ } from 0 to m
-		}
-		PowersTauDelta [][3]*big.Int // powers of τ encrypted in G1 curve, divided by δ
-	}
-	Vk struct {
-		IC [][3]*big.Int
-		G1 struct {
-			Alpha [3]*big.Int
-		}
-		G2 struct {
-			Beta  [3][2]*big.Int
-			Gamma [3][2]*big.Int
-			Delta [3][2]*big.Int
-		}
-	}
+	Pk Pk
+	Vk Vk
 }
 
 // Proof contains the parameters to proof the zkSNARK
@@ -219,7 +222,7 @@ func GenerateTrustedSetup(witnessLength int, circuit circuitcompiler.Circuit, al
 }
 
 // GenerateProofs generates all the parameters to proof the zkSNARK from the Circuit, Setup and the Witness
-func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, px []*big.Int) (Proof, error) {
+func GenerateProofs(circuit circuitcompiler.Circuit, pk Pk, w []*big.Int, px []*big.Int) (Proof, error) {
 	var proof Proof
 	proof.PiA = [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 	proof.PiB = Utils.Bn.Fq6.Zero()
@@ -238,57 +241,57 @@ func GenerateProofs(circuit circuitcompiler.Circuit, setup Setup, w []*big.Int, 
 	piBG1 := [3]*big.Int{Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero(), Utils.Bn.G1.F.Zero()}
 
 	for i := 0; i < circuit.NVars; i++ {
-		proof.PiA = Utils.Bn.G1.Add(proof.PiA, Utils.Bn.G1.MulScalar(setup.Pk.G1.At[i], w[i]))
-		piBG1 = Utils.Bn.G1.Add(piBG1, Utils.Bn.G1.MulScalar(setup.Pk.G1.BACGamma[i], w[i]))
-		proof.PiB = Utils.Bn.G2.Add(proof.PiB, Utils.Bn.G2.MulScalar(setup.Pk.G2.BACGamma[i], w[i]))
+		proof.PiA = Utils.Bn.G1.Add(proof.PiA, Utils.Bn.G1.MulScalar(pk.G1.At[i], w[i]))
+		piBG1 = Utils.Bn.G1.Add(piBG1, Utils.Bn.G1.MulScalar(pk.G1.BACGamma[i], w[i]))
+		proof.PiB = Utils.Bn.G2.Add(proof.PiB, Utils.Bn.G2.MulScalar(pk.G2.BACGamma[i], w[i]))
 	}
 	for i := circuit.NPublic + 1; i < circuit.NVars; i++ {
-		proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(setup.Pk.BACDelta[i], w[i]))
+		proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(pk.BACDelta[i], w[i]))
 	}
 
 	// piA = (Σ from 0 to m (pk.A * w[i])) + pk.Alpha1 + r * δ
-	proof.PiA = Utils.Bn.G1.Add(proof.PiA, setup.Pk.G1.Alpha)
-	deltaR := Utils.Bn.G1.MulScalar(setup.Pk.G1.Delta, r)
+	proof.PiA = Utils.Bn.G1.Add(proof.PiA, pk.G1.Alpha)
+	deltaR := Utils.Bn.G1.MulScalar(pk.G1.Delta, r)
 	proof.PiA = Utils.Bn.G1.Add(proof.PiA, deltaR)
 
 	// piBG1 = (Σ from 0 to m (pk.B1 * w[i])) + pk.g1.Beta + s * δ
 	// piB = piB2 = (Σ from 0 to m (pk.B2 * w[i])) + pk.g2.Beta + s * δ
-	piBG1 = Utils.Bn.G1.Add(piBG1, setup.Pk.G1.Beta)
-	proof.PiB = Utils.Bn.G2.Add(proof.PiB, setup.Pk.G2.Beta)
-	deltaSG1 := Utils.Bn.G1.MulScalar(setup.Pk.G1.Delta, s)
+	piBG1 = Utils.Bn.G1.Add(piBG1, pk.G1.Beta)
+	proof.PiB = Utils.Bn.G2.Add(proof.PiB, pk.G2.Beta)
+	deltaSG1 := Utils.Bn.G1.MulScalar(pk.G1.Delta, s)
 	piBG1 = Utils.Bn.G1.Add(piBG1, deltaSG1)
-	deltaSG2 := Utils.Bn.G2.MulScalar(setup.Pk.G2.Delta, s)
+	deltaSG2 := Utils.Bn.G2.MulScalar(pk.G2.Delta, s)
 	proof.PiB = Utils.Bn.G2.Add(proof.PiB, deltaSG2)
 
-	hx := Utils.PF.DivisorPolynomial(px, setup.Pk.Z) // maybe move this calculation to a previous step
+	hx := Utils.PF.DivisorPolynomial(px, pk.Z) // maybe move this calculation to a previous step
 
 	// piC = (Σ from l+1 to m (w[i] * (pk.g1.Beta + pk.g1.Alpha + pk.C)) + h(tau)) / δ) + piA*s + r*piB - r*s*δ
 	for i := 0; i < len(hx); i++ {
-		proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(setup.Pk.PowersTauDelta[i], hx[i]))
+		proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(pk.PowersTauDelta[i], hx[i]))
 	}
 	proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(proof.PiA, s))
 	proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(piBG1, r))
 	negRS := Utils.FqR.Neg(Utils.FqR.Mul(r, s))
-	proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(setup.Pk.G1.Delta, negRS))
+	proof.PiC = Utils.Bn.G1.Add(proof.PiC, Utils.Bn.G1.MulScalar(pk.G1.Delta, negRS))
 
 	return proof, nil
 }
 
 // VerifyProof verifies over the BN128 the Pairings of the Proof
-func VerifyProof(setup Setup, proof Proof, publicSignals []*big.Int, debug bool) bool {
+func VerifyProof(vk Vk, proof Proof, publicSignals []*big.Int, debug bool) bool {
 
-	icPubl := setup.Vk.IC[0]
+	icPubl := vk.IC[0]
 	for i := 0; i < len(publicSignals); i++ {
-		icPubl = Utils.Bn.G1.Add(icPubl, Utils.Bn.G1.MulScalar(setup.Vk.IC[i+1], publicSignals[i]))
+		icPubl = Utils.Bn.G1.Add(icPubl, Utils.Bn.G1.MulScalar(vk.IC[i+1], publicSignals[i]))
 	}
 
 	if !Utils.Bn.Fq12.Equal(
 		Utils.Bn.Pairing(proof.PiA, proof.PiB),
 		Utils.Bn.Fq12.Mul(
-			Utils.Bn.Pairing(setup.Vk.G1.Alpha, setup.Vk.G2.Beta),
+			Utils.Bn.Pairing(vk.G1.Alpha, vk.G2.Beta),
 			Utils.Bn.Fq12.Mul(
-				Utils.Bn.Pairing(icPubl, setup.Vk.G2.Gamma),
-				Utils.Bn.Pairing(proof.PiC, setup.Vk.G2.Delta)))) {
+				Utils.Bn.Pairing(icPubl, vk.G2.Gamma),
+				Utils.Bn.Pairing(proof.PiC, vk.G2.Delta)))) {
 		if debug {
 			fmt.Println("❌ groth16 verification not passed")
 		}

@@ -274,8 +274,7 @@ func TrustedSetup(context *cli.Context) error {
 	var tsetup snark.Setup
 	tsetup.Pk = setup.Pk
 	tsetup.Vk = setup.Vk
-	tsetup.G1T = setup.G1T
-	tsetup.G2T = setup.G2T
+	tsetup.Pk.G1T = setup.Pk.G1T
 
 	// store setup to json
 	jsonData, err := json.Marshal(tsetup)
@@ -344,10 +343,10 @@ func GenerateProofs(context *cli.Context) error {
 	hx := snark.Utils.PF.DivisorPolynomial(px, trustedsetup.Pk.Z)
 
 	fmt.Println(circuit)
-	fmt.Println(trustedsetup.G1T)
+	fmt.Println(trustedsetup.Pk.G1T)
 	fmt.Println(hx)
 	fmt.Println(w)
-	proof, err := snark.GenerateProofs(circuit, trustedsetup, w, px)
+	proof, err := snark.GenerateProofs(circuit, trustedsetup.Pk, w, px)
 	panicErr(err)
 
 	fmt.Println("\n proofs:")
@@ -388,7 +387,7 @@ func VerifyProofs(context *cli.Context) error {
 	err = json.Unmarshal([]byte(string(publicInputsFile)), &publicSignals)
 	panicErr(err)
 
-	verified := snark.VerifyProof(trustedsetup, proof, publicSignals, true)
+	verified := snark.VerifyProof(trustedsetup.Vk, proof, publicSignals, true)
 	if !verified {
 		fmt.Println("ERROR: proofs not verified")
 	} else {
@@ -499,7 +498,7 @@ func Groth16GenerateProofs(context *cli.Context) error {
 	fmt.Println(trustedsetup.Pk.PowersTauDelta)
 	fmt.Println(hx)
 	fmt.Println(w)
-	proof, err := groth16.GenerateProofs(circuit, trustedsetup, w, px)
+	proof, err := groth16.GenerateProofs(circuit, trustedsetup.Pk, w, px)
 	panicErr(err)
 
 	fmt.Println("\n proofs:")
@@ -540,7 +539,7 @@ func Groth16VerifyProofs(context *cli.Context) error {
 	err = json.Unmarshal([]byte(string(publicInputsFile)), &publicSignals)
 	panicErr(err)
 
-	verified := groth16.VerifyProof(trustedsetup, proof, publicSignals, true)
+	verified := groth16.VerifyProof(trustedsetup.Vk, proof, publicSignals, true)
 	if !verified {
 		fmt.Println("ERROR: proofs not verified")
 	} else {

@@ -86,7 +86,7 @@ func TestGroth16MinimalFlow(t *testing.T) {
 	// check length of polynomials H(x) and Z(x)
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 
-	proof, err := groth16.GenerateProofs(*circuit, setup, w, px)
+	proof, err := groth16.GenerateProofs(*circuit, setup.Pk, w, px)
 	assert.Nil(t, err)
 
 	// fmt.Println("\n proofs:")
@@ -98,13 +98,13 @@ func TestGroth16MinimalFlow(t *testing.T) {
 	b35Verif := big.NewInt(int64(35))
 	publicSignalsVerif := []*big.Int{b35Verif}
 	before := time.Now()
-	assert.True(t, groth16.VerifyProof(setup, proof, publicSignalsVerif, true))
+	assert.True(t, groth16.VerifyProof(setup.Vk, proof, publicSignalsVerif, true))
 	fmt.Println("verify proof time elapsed:", time.Since(before))
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(34))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !groth16.VerifyProof(setup, proof, wrongPublicSignalsVerif, false))
+	assert.True(t, !groth16.VerifyProof(setup.Vk, proof, wrongPublicSignalsVerif, false))
 }
 
 func TestZkFromFlatCircuitCode(t *testing.T) {
@@ -221,7 +221,7 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 	assert.Equal(t, len(hxQAP), len(px)-len(zxQAP)+1)
 
-	proof, err := GenerateProofs(*circuit, setup, w, px)
+	proof, err := GenerateProofs(*circuit, setup.Pk, w, px)
 	assert.Nil(t, err)
 
 	// fmt.Println("\n proofs:")
@@ -233,13 +233,13 @@ func TestZkFromFlatCircuitCode(t *testing.T) {
 	b35Verif := big.NewInt(int64(35))
 	publicSignalsVerif := []*big.Int{b35Verif}
 	before := time.Now()
-	assert.True(t, VerifyProof(setup, proof, publicSignalsVerif, true))
+	assert.True(t, VerifyProof(setup.Vk, proof, publicSignalsVerif, true))
 	fmt.Println("verify proof time elapsed:", time.Since(before))
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(34))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !VerifyProof(setup, proof, wrongPublicSignalsVerif, false))
+	assert.True(t, !VerifyProof(setup.Vk, proof, wrongPublicSignalsVerif, false))
 }
 
 func TestZkMultiplication(t *testing.T) {
@@ -329,7 +329,7 @@ func TestZkMultiplication(t *testing.T) {
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 	assert.Equal(t, len(hxQAP), len(px)-len(zxQAP)+1)
 
-	proof, err := GenerateProofs(*circuit, setup, w, px)
+	proof, err := GenerateProofs(*circuit, setup.Pk, w, px)
 	assert.Nil(t, err)
 
 	// fmt.Println("\n proofs:")
@@ -341,13 +341,13 @@ func TestZkMultiplication(t *testing.T) {
 	b12Verif := big.NewInt(int64(12))
 	publicSignalsVerif := []*big.Int{b12Verif}
 	before := time.Now()
-	assert.True(t, VerifyProof(setup, proof, publicSignalsVerif, true))
+	assert.True(t, VerifyProof(setup.Vk, proof, publicSignalsVerif, true))
 	fmt.Println("verify proof time elapsed:", time.Since(before))
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(11))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !VerifyProof(setup, proof, wrongPublicSignalsVerif, false))
+	assert.True(t, !VerifyProof(setup.Vk, proof, wrongPublicSignalsVerif, false))
 }
 
 func TestMinimalFlow(t *testing.T) {
@@ -418,7 +418,7 @@ func TestMinimalFlow(t *testing.T) {
 	// check length of polynomials H(x) and Z(x)
 	assert.Equal(t, len(hx), len(px)-len(setup.Pk.Z)+1)
 
-	proof, err := GenerateProofs(*circuit, setup, w, px)
+	proof, err := GenerateProofs(*circuit, setup.Pk, w, px)
 	assert.Nil(t, err)
 
 	// fmt.Println("\n proofs:")
@@ -430,11 +430,11 @@ func TestMinimalFlow(t *testing.T) {
 	b35Verif := big.NewInt(int64(35))
 	publicSignalsVerif := []*big.Int{b35Verif}
 	before := time.Now()
-	assert.True(t, VerifyProof(setup, proof, publicSignalsVerif, true))
+	assert.True(t, VerifyProof(setup.Vk, proof, publicSignalsVerif, true))
 	fmt.Println("verify proof time elapsed:", time.Since(before))
 
 	// check that with another public input the verification returns false
 	bOtherWrongPublic := big.NewInt(int64(34))
 	wrongPublicSignalsVerif := []*big.Int{bOtherWrongPublic}
-	assert.True(t, !VerifyProof(setup, proof, wrongPublicSignalsVerif, false))
+	assert.True(t, !VerifyProof(setup.Vk, proof, wrongPublicSignalsVerif, false))
 }

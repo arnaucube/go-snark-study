@@ -80,7 +80,7 @@ func generateProofs(this js.Value, i []js.Value) interface{} {
 	}
 	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
 
-	proof, err := snark.GenerateProofs(circuit, setup, w, px)
+	proof, err := snark.GenerateProofs(circuit, setup.Pk, w, px)
 	if err != nil {
 		println("error generating proof", err)
 	}
@@ -123,7 +123,7 @@ func verifyProofs(this js.Value, i []js.Value) interface{} {
 		println("error parsing publicInputs from stringified json")
 	}
 
-	verified := snark.VerifyProof(setup, proof, publicInputs, false)
+	verified := snark.VerifyProof(setup.Vk, proof, publicInputs, false)
 	if err != nil {
 		println("error verifiyng proof", err)
 	}
@@ -190,7 +190,7 @@ func grothGenerateProofs(this js.Value, i []js.Value) interface{} {
 	}
 	w, err := circuit.CalculateWitness(inputs.Private, inputs.Public)
 
-	proof, err := groth16.GenerateProofs(circuit, setup, w, px)
+	proof, err := groth16.GenerateProofs(circuit, setup.Pk, w, px)
 	if err != nil {
 		println("error generating proof", err)
 	}
@@ -233,7 +233,7 @@ func grothVerifyProofs(this js.Value, i []js.Value) interface{} {
 		println("error parsing publicInputs from stringified json")
 	}
 
-	verified := groth16.VerifyProof(setup, proof, publicInputs, false)
+	verified := groth16.VerifyProof(setup.Vk, proof, publicInputs, false)
 	if err != nil {
 		println("error verifiyng proof", err)
 	}
