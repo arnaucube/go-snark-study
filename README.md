@@ -1,17 +1,17 @@
-# go-snark [![Go Report Card](https://goreportcard.com/badge/github.com/arnaucube/go-snark)](https://goreportcard.com/report/github.com/arnaucube/go-snark) [![Build Status](https://travis-ci.org/arnaucube/go-snark.svg?branch=master)](https://travis-ci.org/arnaucube/go-snark) [![Gitter](https://badges.gitter.im/go-snark/community.svg)](https://gitter.im/go-snark/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+### Warning
+Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) from scratch in Go done in my free time to understand the concepts. Do not use in production.
+
+If you want to generate proofs & verify them from Go, you can try https://github.com/vocdoni/go-snark, which is implemented using the [bn256](https://github.com/ethereum/go-ethereum/tree/master/crypto/bn256/cloudflare) for the Pairing curve operations for the Groth16 zkSNARK, and it is compatible with [circom](https://github.com/iden3/circom).
+
+# go-snark [![Go Report Card](https://goreportcard.com/badge/github.com/arnaucube/go-snark)](https://goreportcard.com/report/github.com/arnaucube/go-snark) [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark?status.svg)](https://godoc.org/github.com/arnaucube/go-snark)
 
 zkSNARK library implementation in Go
-
 
 - `Succinct Non-Interactive Zero Knowledge for a von Neumann Architecture`, Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza https://eprint.iacr.org/2013/879.pdf
 - `Pinocchio: Nearly practical verifiable computation`, Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova https://eprint.iacr.org/2013/279.pdf
 - `On the Size of Pairing-based Non-interactive Arguments`, Jens Groth https://eprint.iacr.org/2016/260.pdf
 
-## Caution & Warning
-Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) from scratch in Go to understand the concepts. Do not use in production.
-
-Not finished, implementing this in my free time to understand it better, so I don't have much time.
-
+## Features
 Currently allows to do the complete path with [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) :
 
 0. write circuit
@@ -33,18 +33,8 @@ Minimal complete flow implementation:
 - [x] generate proofs
 - [x] verify proofs with BN128 pairing
 
-Improvements from the minimal implementation:
-- [x] allow to call functions in circuits language
-- [x] allow `import` in circuits language
-- [ ] allow `for` in circuits language
-- [ ] move witness values calculation outside the setup phase
-- [x] Groth16
-- [ ] multiple optimizations
-- [x] wasm proof generation
-- [x] wasm proof verification
-
 ## WASM usage
-Ongoing experimentation with go-snark compiled to wasm: https://github.com/arnaucube/go-snark/tree/master/wasm
+Experimentation with go-snark compiled to wasm: https://github.com/arnaucube/go-snark/tree/master/wasm
 
 ## Usage
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark?status.svg)](https://godoc.org/github.com/arnaucube/go-snark) zkSnark
