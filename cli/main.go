@@ -15,7 +15,7 @@ import (
 	"github.com/arnaucube/go-snark/circuitcompiler"
 	"github.com/arnaucube/go-snark/groth16"
 	"github.com/arnaucube/go-snark/r1csqap"
-	"github.com/arnaucube/go-snark/wasm/utils"
+	"github.com/arnaucube/go-snark/utils"
 	"github.com/urfave/cli"
 )
 

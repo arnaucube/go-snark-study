@@ -8,7 +8,7 @@ import (
 	"github.com/arnaucube/go-snark"
 	"github.com/arnaucube/go-snark/circuitcompiler"
 	"github.com/arnaucube/go-snark/groth16"
-	"github.com/arnaucube/go-snark/wasm/utils"
+	"github.com/arnaucube/go-snark/utils"
 )
 
 func main() {

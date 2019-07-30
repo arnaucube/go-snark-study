@@ -398,36 +398,38 @@ func ProofFromString(s ProofString) (snark.Proof, error) {
 }
 
 // groth
+type GrothPkString struct { // Proving Key
+	BACDelta [][3]string
+	Z        []string
+	G1       struct {
+		Alpha    [3]string
+		Beta     [3]string
+		Delta    [3]string
+		At       [][3]string
+		BACGamma [][3]string
+	}
+	G2 struct {
+		Beta     [3][2]string
+		Gamma    [3][2]string
+		Delta    [3][2]string
+		BACGamma [][3][2]string
+	}
+	PowersTauDelta [][3]string
+}
+type GrothVkString struct {
+	IC [][3]string
+	G1 struct {
+		Alpha [3]string
+	}
+	G2 struct {
+		Beta  [3][2]string
+		Gamma [3][2]string
+		Delta [3][2]string
+	}
+}
 type GrothSetupString struct {
-	Pk struct { // Proving Key
-		BACDelta [][3]string
-		Z        []string
-		G1       struct {
-			Alpha    [3]string
-			Beta     [3]string
-			Delta    [3]string
-			At       [][3]string
-			BACGamma [][3]string
-		}
-		G2 struct {
-			Beta     [3][2]string
-			Gamma    [3][2]string
-			Delta    [3][2]string
-			BACGamma [][3][2]string
-		}
-		PowersTauDelta [][3]string
-	}
-	Vk struct {
-		IC [][3]string
-		G1 struct {
-			Alpha [3]string
-		}
-		G2 struct {
-			Beta  [3][2]string
-			Gamma [3][2]string
-			Delta [3][2]string
-		}
-	}
+	Pk GrothPkString
+	Vk GrothVkString
 }
 
 func GrothSetupToString(setup groth16.Setup) GrothSetupString {
@@ -450,6 +452,31 @@ func GrothSetupToString(setup groth16.Setup) GrothSetupString {
 	s.Vk.G2.Gamma = BigInt32ToString(setup.Vk.G2.Gamma)
 	s.Vk.G2.Delta = BigInt32ToString(setup.Vk.G2.Delta)
 	return s
+}
+func GrothVkFromString(s GrothVkString) (groth16.Vk, error) {
+	var vk groth16.Vk
+	var err error
+	vk.IC, err = Array3StringToBigInt(s.IC)
+	if err != nil {
+		return vk, err
+	}
+	vk.G1.Alpha, err = String3ToBigInt(s.G1.Alpha)
+	if err != nil {
+		return vk, err
+	}
+	vk.G2.Beta, err = String32ToBigInt(s.G2.Beta)
+	if err != nil {
+		return vk, err
+	}
+	vk.G2.Gamma, err = String32ToBigInt(s.G2.Gamma)
+	if err != nil {
+		return vk, err
+	}
+	vk.G2.Delta, err = String32ToBigInt(s.G2.Delta)
+	if err != nil {
+		return vk, err
+	}
+	return vk, nil
 }
 func GrothSetupFromString(s GrothSetupString) (groth16.Setup, error) {
 	var o groth16.Setup
