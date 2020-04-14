@@ -8,10 +8,12 @@ zkSNARK library implementation in Go
 - `On the Size of Pairing-based Non-interactive Arguments`, Jens Groth https://eprint.iacr.org/2016/260.pdf
 
 ## Caution & Warning
-Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) from scratch in Go to understand the concepts. Do not use in production.
+Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) from scratch in Go done in my free time to understand the concepts. Do not use in production.
 
-Not finished, implementing this in my free time to understand it better, so I don't have much time.
+## zkSNARKs in Go
+If you need to use zkSNARKs in Go, I would recommend to take a look at [go-circom-prover-verifier](https://github.com/iden3/go-circom-prover-verifier), which I've wrote using the [bn256](https://github.com/ethereum/go-ethereum/tree/master/crypto/bn256/cloudflare) for the Pairing curve operations for the Groth16 zkSNARK, and it is compatible with [circom](https://github.com/iden3/circom).
 
+## Features
 Currently allows to do the complete path with [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) :
 
 0. write circuit
@@ -33,18 +35,8 @@ Minimal complete flow implementation:
 - [x] generate proofs
 - [x] verify proofs with BN128 pairing
 
-Improvements from the minimal implementation:
-- [x] allow to call functions in circuits language
-- [x] allow `import` in circuits language
-- [ ] allow `for` in circuits language
-- [ ] move witness values calculation outside the setup phase
-- [x] Groth16
-- [ ] multiple optimizations
-- [x] wasm proof generation
-- [x] wasm proof verification
-
 ## WASM usage
-Ongoing experimentation with go-snark compiled to wasm: https://github.com/arnaucube/go-snark/tree/master/wasm
+Experimentation with go-snark compiled to wasm: https://github.com/arnaucube/go-snark/tree/master/wasm
 
 ## Usage
 - [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark?status.svg)](https://godoc.org/github.com/arnaucube/go-snark) zkSnark
