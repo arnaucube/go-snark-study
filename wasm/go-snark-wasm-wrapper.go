@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"syscall/js"
 
-	"github.com/arnaucube/go-snark"
-	"github.com/arnaucube/go-snark/circuitcompiler"
-	"github.com/arnaucube/go-snark/groth16"
-	"github.com/arnaucube/go-snark/utils"
+	"github.com/arnaucube/go-snark-study"
+	"github.com/arnaucube/go-snark-study/circuitcompiler"
+	"github.com/arnaucube/go-snark-study/groth16"
+	"github.com/arnaucube/go-snark-study/utils"
 )
 
 func main() {

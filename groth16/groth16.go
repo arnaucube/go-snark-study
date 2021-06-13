@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/arnaucube/go-snark/bn128"
-	"github.com/arnaucube/go-snark/circuitcompiler"
-	"github.com/arnaucube/go-snark/fields"
-	"github.com/arnaucube/go-snark/r1csqap"
+	"github.com/arnaucube/go-snark-study/bn128"
+	"github.com/arnaucube/go-snark-study/circuitcompiler"
+	"github.com/arnaucube/go-snark-study/fields"
+	"github.com/arnaucube/go-snark-study/r1csqap"
 )
 
 type Pk struct { // Proving Key

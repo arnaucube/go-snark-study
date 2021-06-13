@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"math/big"
 
-	"github.com/arnaucube/go-snark/fields"
+	"github.com/arnaucube/go-snark-study/fields"
 )
 
 // Transpose transposes the *big.Int matrix

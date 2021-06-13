@@ -1,17 +1,15 @@
-# go-snark [![Go Report Card](https://goreportcard.com/badge/github.com/arnaucube/go-snark)](https://goreportcard.com/report/github.com/arnaucube/go-snark) [![Build Status](https://travis-ci.org/arnaucube/go-snark.svg?branch=master)](https://travis-ci.org/arnaucube/go-snark) [![Gitter](https://badges.gitter.im/go-snark/community.svg)](https://gitter.im/go-snark/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+### Warning
+Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) from scratch in Go done in my free time to understand the concepts. Do not use in production.
+
+If you want to generate proofs & verify them from Go, you can try https://github.com/vocdoni/go-snark, which is implemented using the [bn256](https://github.com/ethereum/go-ethereum/tree/master/crypto/bn256/cloudflare) for the Pairing curve operations for the Groth16 zkSNARK, and it is compatible with [circom](https://github.com/iden3/circom).
+
+# go-snark-study [![Go Report Card](https://goreportcard.com/badge/github.com/arnaucube/go-snark-study)](https://goreportcard.com/report/github.com/arnaucube/go-snark-study) [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark-study?status.svg)](https://godoc.org/github.com/arnaucube/go-snark-study)
 
 zkSNARK library implementation in Go
-
 
 - `Succinct Non-Interactive Zero Knowledge for a von Neumann Architecture`, Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza https://eprint.iacr.org/2013/879.pdf
 - `Pinocchio: Nearly practical verifiable computation`, Bryan Parno, Craig Gentry, Jon Howell, Mariana Raykova https://eprint.iacr.org/2013/279.pdf
 - `On the Size of Pairing-based Non-interactive Arguments`, Jens Groth https://eprint.iacr.org/2016/260.pdf
-
-## Caution & Warning
-Implementation of the zkSNARK [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) from scratch in Go done in my free time to understand the concepts. Do not use in production.
-
-## zkSNARKs in Go
-If you need to use zkSNARKs in Go, I would recommend to take a look at [go-circom-prover-verifier](https://github.com/iden3/go-circom-prover-verifier), which I've wrote using the [bn256](https://github.com/ethereum/go-ethereum/tree/master/crypto/bn256/cloudflare) for the Pairing curve operations for the Groth16 zkSNARK, and it is compatible with [circom](https://github.com/iden3/circom).
 
 ## Features
 Currently allows to do the complete path with [Pinocchio protocol](https://eprint.iacr.org/2013/279.pdf) and [Groth16 protocol](https://eprint.iacr.org/2016/260.pdf) :
@@ -36,15 +34,15 @@ Minimal complete flow implementation:
 - [x] verify proofs with BN128 pairing
 
 ## WASM usage
-Experimentation with go-snark compiled to wasm: https://github.com/arnaucube/go-snark/tree/master/wasm
+Experimentation with go-snark-study compiled to wasm: https://github.com/arnaucube/go-snark-study/tree/master/wasm
 
 ## Usage
-- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark?status.svg)](https://godoc.org/github.com/arnaucube/go-snark) zkSnark
-- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/groth16?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/groth16) zkSnark Groth16
-- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/bn128?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/bn128) bn128 (more details: https://github.com/arnaucube/go-snark/tree/master/bn128)
-- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/fields?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/fields) Finite Fields operations
-- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/r1csqap?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/r1csqap) R1CS to QAP (more details: https://github.com/arnaucube/go-snark/tree/master/r1csqap)
-- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/circuitcompiler) Circuit Compiler
+- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark-study?status.svg)](https://godoc.org/github.com/arnaucube/go-snark-study) zkSnark
+- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark-study/groth16?status.svg)](https://godoc.org/github.com/arnaucube/go-snark-study/groth16) zkSnark Groth16
+- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark-study/bn128?status.svg)](https://godoc.org/github.com/arnaucube/go-snark-study/bn128) bn128 (more details: https://github.com/arnaucube/go-snark-study/tree/master/bn128)
+- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark-study/fields?status.svg)](https://godoc.org/github.com/arnaucube/go-snark-study/fields) Finite Fields operations
+- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark-study/r1csqap?status.svg)](https://godoc.org/github.com/arnaucube/go-snark-study/r1csqap) R1CS to QAP (more details: https://github.com/arnaucube/go-snark-study/tree/master/r1csqap)
+- [![GoDoc](https://godoc.org/github.com/arnaucube/go-snark-study/circuitcompiler?status.svg)](https://godoc.org/github.com/arnaucube/go-snark-study/circuitcompiler) Circuit Compiler
 
 ### CLI usage
 *The cli still needs some improvements, such as seting input files, etc.*
@@ -197,7 +195,7 @@ assert.True(t, VerifyProof(*circuit, setup, proof, publicSignalsVerif, true))
 ```
 
 ##### Verify Proof generated from [snarkjs](https://github.com/iden3/snarkjs)
-Is possible with `go-snark` to verify proofs generated by `snarkjs`
+Is possible with `go-snark-study` to verify proofs generated by `snarkjs`
 
 Example:
 ```go
@@ -219,7 +217,7 @@ go test ./... -v
 ```
 
 ## vim/nvim circuit syntax highlighter
-For more details and installation instructions see https://github.com/arnaucube/go-snark/tree/master/vim-syntax
+For more details and installation instructions see https://github.com/arnaucube/go-snark-study/tree/master/vim-syntax
 
 ---
 

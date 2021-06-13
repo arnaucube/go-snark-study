@@ -1,4 +1,4 @@
-# go-snark wasm
+# go-snark-study wasm
 *Warning: this is an ongoing experimentation*
 
 WASM wrappers for zkSNARK Pinocchio & Groth16 protocols.

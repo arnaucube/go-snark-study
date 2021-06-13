@@ -4,9 +4,9 @@ import (
 	"errors"
 	"math/big"
 
-	snark "github.com/arnaucube/go-snark"
-	"github.com/arnaucube/go-snark/circuitcompiler"
-	"github.com/arnaucube/go-snark/groth16"
+	snark "github.com/arnaucube/go-snark-study"
+	"github.com/arnaucube/go-snark-study/circuitcompiler"
+	"github.com/arnaucube/go-snark-study/groth16"
 )
 
 // []*big.Int

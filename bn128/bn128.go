@@ -4,7 +4,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/arnaucube/go-snark/fields"
+	"github.com/arnaucube/go-snark-study/fields"
 )
 
 // Bn128 is the data structure of the BN128

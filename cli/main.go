@@ -11,11 +11,11 @@ import (
 	"math/big"
 	"os"
 
-	snark "github.com/arnaucube/go-snark"
-	"github.com/arnaucube/go-snark/circuitcompiler"
-	"github.com/arnaucube/go-snark/groth16"
-	"github.com/arnaucube/go-snark/r1csqap"
-	"github.com/arnaucube/go-snark/utils"
+	snark "github.com/arnaucube/go-snark-study"
+	"github.com/arnaucube/go-snark-study/circuitcompiler"
+	"github.com/arnaucube/go-snark-study/groth16"
+	"github.com/arnaucube/go-snark-study/r1csqap"
+	"github.com/arnaucube/go-snark-study/utils"
 	"github.com/urfave/cli"
 )
 

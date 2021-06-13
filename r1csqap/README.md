@@ -1,5 +1,5 @@
 ## R1CS to Quadratic Arithmetic Program
-[![GoDoc](https://godoc.org/github.com/arnaucube/go-snark/r1csqap?status.svg)](https://godoc.org/github.com/arnaucube/go-snark/r1csqap) R1CS to QAP
+[![GoDoc](https://godoc.org/github.com/arnaucube/go-snark-study/r1csqap?status.svg)](https://godoc.org/github.com/arnaucube/go-snark-study/r1csqap) R1CS to QAP
 - `Succinct Non-Interactive Zero Knowledge for a von Neumann Architecture`, Eli Ben-Sasson, Alessandro Chiesa, Eran Tromer, Madars Virza https://eprint.iacr.org/2013/879.pdf
 - Vitalik Buterin blog post about QAP https://medium.com/@VitalikButerin/quadratic-arithmetic-programs-from-zero-to-hero-f6d558cea649
 - Ariel Gabizon in Zcash blog https://z.cash/blog/snark-explain5
